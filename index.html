@@ -187,6 +187,7 @@ input.masked.show{-webkit-text-security:none;}
   <button class="on" data-tab="list" role="tab">きろく</button>
   <button data-tab="sum" role="tab">集計</button>
   <button data-tab="out" role="tab">出力</button>
+  <button data-tab="set" role="tab">設定</button>
 </nav>
 
 <div class="wrap">
@@ -307,6 +308,10 @@ input.masked.show{-webkit-text-security:none;}
       <p class="note" id="dataStat"></p>
     </div>
 
+  </section>
+
+  <!-- 設定 -->
+  <section class="page" id="p-set">
     <h2 class="sec">設定</h2>
     <div class="card">
       <div class="fld"><label for="setFac">事業所の名前</label><input type="text" id="setFac"></div>
@@ -970,6 +975,16 @@ $('#btnMeetShare').addEventListener('click',()=>{
   else copyText(t).then(()=>toast('コピーしました'));
 });
 
+function gotoSettings(msg){
+  $$('nav.tabs button').forEach(x=>x.classList.remove('on'));
+  const t=document.querySelector('nav.tabs button[data-tab="set"]');
+  if(t) t.classList.add('on');
+  $$('.page').forEach(p=>p.classList.remove('on'));
+  const el=$('#p-set'); if(el) el.classList.add('on');
+  fillSettings();
+  window.scrollTo(0,0);
+  toast(msg);
+}
 /* ===== 管理者と共有する ===== */
 function unsentList(){
   const p=settings.pending||[];
@@ -1019,7 +1034,7 @@ function renderConfirm(){
 }
 $('#btnPack').addEventListener('click',async ()=>{
   const key=settings.shareKey||'';
-  if(!key){ toast('設定タブで、共有の合言葉を決めてください'); return; }
+  if(!key){ gotoSettings('まず、共有の合言葉を決めてください'); return; }
   if(!window.crypto||!crypto.subtle){ toast('この画面では包めません。https:// でお開きください'); return; }
   const un=unsentList();
   if(!un.length){ toast('送る記録がありません'); return; }
@@ -1099,7 +1114,7 @@ function qrStart(){
 function qrStop(){ clearInterval(qrTimer); qrTimer=null; }
 $('#btnQrSend').addEventListener('click',async ()=>{
   const key=settings.shareKey||'';
-  if(!key){ toast('設定タブで、共有の合言葉を決めてください'); return; }
+  if(!key){ gotoSettings('まず、共有の合言葉を決めてください'); return; }
   if(typeof qrcode==='undefined'){ toast('QRコードの部品が読み込めていません'); return; }
   if(!window.crypto||!crypto.subtle){ toast('この画面では包めません。https:// でお開きください'); return; }
   const un=unsentList();
@@ -1195,7 +1210,7 @@ function scanStop(){
   if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
 }
 $('#btnQrScan').addEventListener('click',async ()=>{
-  if(!settings.shareKey){ toast('設定タブで、共有の合言葉を入れてください'); return; }
+  if(!settings.shareKey){ gotoSettings('まず、共有の合言葉を入れてください'); return; }
   if(typeof jsQR==='undefined'){ toast('読み取りの部品が読み込めていません'); return; }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     toast('この端末ではカメラが使えません。貼り付けでお試しください'); return;
@@ -1221,7 +1236,7 @@ $('#btnUnpack').addEventListener('click',async ()=>{
   const raw=$('#inBundle').value.trim();
   if(!raw){ toast('貼り付けてください'); return; }
   const key=settings.shareKey||'';
-  if(!key){ toast('設定タブで、共有の合言葉を入れてください'); return; }
+  if(!key){ gotoSettings('まず、共有の合言葉を入れてください'); return; }
   const b2=bodyOf(raw,MARK2), b1=bodyOf(raw,MARK);
   if(!b2&&!b1){
     $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">包まれた中身が見あたりません。届いた文の全体を、そのまま貼り付けてみてください。</div>';
@@ -1436,6 +1451,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',async ()=>{
   if(b.dataset.tab==='list') renderList();
   if(b.dataset.tab==='sum') renderSum();
   if(b.dataset.tab==='out'){ renderSum(); renderSend(); await stat(); }
+  if(b.dataset.tab==='set'){ fillSettings(); }
   window.scrollTo(0,0);
 }));
 

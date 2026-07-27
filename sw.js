@@ -1,4 +1,4 @@
-const CACHE = 'hiyari-techo-v5';
+const CACHE = 'hiyari-techo-v6';
 const ASSETS = ['./','./index.html','./manifest.json','./qrcode.js','./jsQR.js','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
