@@ -173,6 +173,11 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
   <!-- きろく -->
   <section class="page on" id="p-list">
     <button class="btn v wide" id="btnNew" style="padding:14px;font-size:15px;">＋ あたらしく記録する</button>
+    <div class="filters" id="svcFilters" style="display:none;">
+      <button data-s="all" class="on">両方</button>
+      <button data-s="kaigo">デイサービス</button>
+      <button data-s="jido">放課後デイ</button>
+    </div>
     <div class="filters" id="filters">
       <button data-f="all" class="on">すべて</button>
       <button data-f="hiyari">ヒヤリハット</button>
@@ -195,6 +200,11 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
         <option value="12">この1年</option>
         <option value="0">すべて</option>
       </select>
+    </div>
+    <div class="filters" id="sumSvcFilters" style="display:none;">
+      <button data-s="all" class="on">両方</button>
+      <button data-s="kaigo">デイサービス</button>
+      <button data-s="jido">放課後デイ</button>
     </div>
     <div class="summary" id="sumCount"></div>
 
@@ -248,8 +258,25 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
     <h2 class="sec">設定</h2>
     <div class="card">
       <div class="fld"><label for="setFac">事業所の名前</label><input type="text" id="setFac"></div>
-      <div class="fld"><label for="setPlaces">場所の選択肢（1行に1つ）</label><textarea id="setPlaces" style="min-height:130px;"></textarea></div>
-      <div class="fld"><label for="setTypes">できごとの種類（1行に1つ）</label><textarea id="setTypes" style="min-height:130px;"></textarea></div>
+      <div class="fld">
+        <label>この事業所でおこなっているもの</label>
+        <div class="chips" id="chMode">
+          <button data-v="kaigo">デイサービス</button>
+          <button data-v="jido">放課後デイ</button>
+          <button data-v="both">両方</button>
+        </div>
+        <p class="note" style="margin-top:6px;">「両方」を選ぶと、記録するときにどちらの事業かを選べるようになり、集計も分けて見られます。</p>
+      </div>
+      <div id="setKaigo">
+        <p class="note" style="font-weight:700;color:var(--ink2);margin:14px 0 6px;" id="hdKaigo">デイサービスの選択肢</p>
+        <div class="fld"><label for="setPlacesK">場所（1行に1つ）</label><textarea id="setPlacesK" style="min-height:120px;"></textarea></div>
+        <div class="fld"><label for="setTypesK">できごとの種類（1行に1つ）</label><textarea id="setTypesK" style="min-height:120px;"></textarea></div>
+      </div>
+      <div id="setJido">
+        <p class="note" style="font-weight:700;color:var(--ink2);margin:14px 0 6px;" id="hdJido">放課後デイの選択肢</p>
+        <div class="fld"><label for="setPlacesJ">場所（1行に1つ）</label><textarea id="setPlacesJ" style="min-height:120px;"></textarea></div>
+        <div class="fld"><label for="setTypesJ">できごとの種類（1行に1つ）</label><textarea id="setTypesJ" style="min-height:120px;"></textarea></div>
+      </div>
       <button class="btn g" id="btnSaveSet">保存する</button>
     </div>
 
@@ -275,6 +302,14 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
         同じことが起きないように、仕組みのほうを直すための記録です。気づいたことを、そのまま書いてください。
       </div>
 
+      <div class="fld" id="wrapSvc" style="display:none;">
+        <label>どちらの事業でのことですか</label>
+        <div class="chips" id="chSvc">
+          <button data-v="kaigo">デイサービス</button>
+          <button data-v="jido">放課後デイ</button>
+        </div>
+      </div>
+
       <h2 class="sec">いつ・どこで</h2>
       <div class="two">
         <div class="fld"><label for="rDate">日付</label><input type="date" id="rDate"></div>
@@ -298,7 +333,7 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
         <label>できごとの種類</label>
         <div class="chips" id="chType"></div>
       </div>
-      <div class="fld"><label for="rPerson">利用者のお名前</label>
+      <div class="fld"><label for="rPerson" id="lblPerson">利用者のお名前</label>
         <input type="text" id="rPerson" list="personList" placeholder="例：松本 静江">
         <datalist id="personList"></datalist></div>
       <div class="fld"><label for="rSituation">そのときのようす（見たままを書いてください）</label>
@@ -317,7 +352,7 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
       <div class="fld"><label for="rAction">その場でした対応</label>
         <textarea id="rAction" placeholder="例：その場で座っていただき、看護師が全身を確認。痛みの訴えなし。マットは即時に撤去。"></textarea></div>
       <div class="two">
-        <div class="fld"><label for="rFamily">ご家族へのご連絡</label>
+        <div class="fld"><label for="rFamily" id="lblFamily">ご家族へのご連絡</label>
           <select id="rFamily"><option value="">—</option><option>連絡した</option><option>不要と判断</option><option>これから連絡する</option></select></div>
         <div class="fld"><label for="rFamilyTime">連絡した時刻</label><input type="time" id="rFamilyTime"></div>
       </div>
@@ -334,14 +369,7 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
       <h2 class="sec">どうして起きたか</h2>
       <div class="fld">
         <label>あてはまるもの（いくつでも）</label>
-        <div class="chips multi" id="chFactor">
-          <button data-v="環境">環境（段差・物・明るさ）</button>
-          <button data-v="人手">人手・時間帯</button>
-          <button data-v="手順">手順・決めごと</button>
-          <button data-v="からだ">ご本人のからだ</button>
-          <button data-v="情報共有">情報の共有</button>
-          <button data-v="用具">用具・福祉用具</button>
-        </div>
+        <div class="chips multi" id="chFactor"></div>
       </div>
       <div class="fld"><label for="rFactorNote">くわしく</label>
         <textarea id="rFactorNote" placeholder="例：マットの端がめくれていたが、誰も気づいていなかった。朝の申し送りにも出ていない。"></textarea></div>
@@ -403,8 +431,35 @@ function idbClear(s){ return new Promise((res,rej)=>{const r=tx(s,'readwrite').c
 const DEF_PLACES=['居室・フロア','廊下','トイレ','浴室・脱衣室','食堂','玄関','送迎車','屋外','機能訓練室','階段'];
 const DEF_TYPES=['転倒・転落','ずり落ち','誤薬・薬の飲み忘れ','誤嚥・むせこみ','皮膚のはがれ・打撲',
   '衝突・ぶつかり','行方が分からなくなる','送迎中のできごと','食事の間違い','異食','その他'];
-let reports=[], settings={facility:'',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()};
-let curRep=null, listFilter='all';
+const DEF_PLACES_J=['活動室','静養室','トイレ','玄関','園庭・屋外','送迎車','学校','公園','事業所の外','階段'];
+const DEF_TYPES_J=['転倒・転落','遊具からの落下','離設・飛び出し','送迎車への置き去り',
+  'お友だちとのトラブル','噛みつき・ひっかき','誤食・アレルギー','誤飲','発作','けが（ぶつかり・すり傷）','その他'];
+const SVC_NAME={kaigo:'デイサービス',jido:'放課後デイ'};
+const FACTORS={
+  kaigo:[['環境','環境（段差・物・明るさ）'],['人手','人手・時間帯'],['手順','手順・決めごと'],
+         ['からだ','ご本人のからだ'],['情報共有','情報の共有'],['用具','用具・福祉用具']],
+  jido:[['環境','環境（段差・物・明るさ）'],['人手','人手・時間帯'],['手順','手順・決めごと'],
+        ['からだ','本人の特性・体調'],['情報共有','情報の共有'],['用具','遊具・用具']]
+};
+let reports=[], settings=normSettings(null);
+let curRep=null, listFilter='all', listSvc='all', sumSvc='all', formSvc='kaigo';
+
+function arr(a,d){ return (Array.isArray(a)&&a.length)?a.slice():d.slice(); }
+function normSettings(v){
+  const s=Object.assign({facility:'',mode:'kaigo'},v||{});
+  // 以前の形（places/types だけ）からの引き継ぎ
+  if(!s.kaigo && Array.isArray(s.places)) s.kaigo={places:s.places,types:s.types};
+  s.kaigo=Object.assign({},s.kaigo||{});
+  s.jido=Object.assign({},s.jido||{});
+  s.kaigo.places=arr(s.kaigo.places,DEF_PLACES); s.kaigo.types=arr(s.kaigo.types,DEF_TYPES);
+  s.jido.places=arr(s.jido.places,DEF_PLACES_J); s.jido.types=arr(s.jido.types,DEF_TYPES_J);
+  if(s.mode!=='kaigo'&&s.mode!=='jido'&&s.mode!=='both') s.mode='kaigo';
+  delete s.places; delete s.types;
+  return s;
+}
+function svcOf(r){ return (r&&r.svc==='jido')?'jido':(r&&r.svc==='kaigo')?'kaigo':(settings.mode==='jido'?'jido':'kaigo'); }
+function isBoth(){ return settings.mode==='both'; }
+function defSvc(){ return settings.mode==='jido'?'jido':'kaigo'; }
 let seq=Date.now()%100000;
 
 const $=s=>document.querySelector(s);
@@ -471,7 +526,8 @@ function bars(el,rows,accent){
 }
 function renderSum(){
   const months=Number($('#sumRange').value);
-  const list=inRange(reports,months);
+  let list=inRange(reports,months);
+  if(isBoth()&&sumSvc!=='all') list=list.filter(r=>svcOf(r)===sumSvc);
   const j=list.filter(r=>r.kind==='事故').length;
   const h=list.filter(r=>r.kind!=='事故').length;
   $('#sumCount').innerHTML='<div class="h"><b>'+h+'</b><span>ヒヤリハット</span></div>'+
@@ -491,7 +547,8 @@ $('#sumRange').addEventListener('change',renderSum);
 
 function renderMeet(list,months){
   if(!list.length){ $('#meetText').textContent='この期間の記録はありません。'; return; }
-  const label=months?('直近'+months+'か月'):'これまでのすべて';
+  const label=(months?('直近'+months+'か月'):'これまでのすべて')+
+    ((isBoth()&&sumSvc!=='all')?'・'+SVC_NAME[sumSvc]:'');
   const j=list.filter(r=>r.kind==='事故').length, h=list.length-j;
   const places=tally(list,r=>r.place||r.placeOther).slice(0,3);
   const types=tally(list,r=>r.type).slice(0,3);
@@ -515,6 +572,7 @@ function renderList(){
   const ym=$('#listMonth').value;
   let list=reports.slice().sort((a,b)=>(b.date+' '+(b.time||'')).localeCompare(a.date+' '+(a.time||'')));
   if(ym) list=list.filter(r=>r.date.slice(0,7)===ym);
+  if(isBoth()&&listSvc!=='all') list=list.filter(r=>svcOf(r)===listSvc);
   if(listFilter==='hiyari') list=list.filter(r=>r.kind!=='事故');
   if(listFilter==='jiko') list=list.filter(r=>r.kind==='事故');
   if(listFilter==='todo') list=list.filter(r=>r.status!=='対応おわり');
@@ -531,6 +589,7 @@ function renderList(){
       '<div class="rbody">'+esc((r.place||r.placeOther||'')+(r.person?'／'+r.person+' 様':''))+
       (r.situation?'<br>'+esc(r.situation.slice(0,60))+(r.situation.length>60?'…':''):'')+'</div>'+
       '<div class="rfoot">'+
+      (isBoth()?'<span class="tag">'+esc(SVC_NAME[svcOf(r)])+'</span>':'')+
       (r.injury&&r.injury!=='なし'?'<span class="tag v">'+esc(r.injury)+'</span>':'')+
       (r.gov==='要'?'<span class="tag v">自治体報告 要</span>':'')+
       (r.gov==='済'?'<span class="tag g">自治体報告 済</span>':'')+
@@ -542,6 +601,14 @@ function renderList(){
 $$('#filters button').forEach(b=>b.addEventListener('click',()=>{
   $$('#filters button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); listFilter=b.dataset.f; renderList();
+}));
+$$('#svcFilters button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#svcFilters button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); listSvc=b.dataset.s; renderList();
+}));
+$$('#sumSvcFilters button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#sumSvcFilters button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); sumSvc=b.dataset.s; renderSum();
 }));
 $('#listMonth').addEventListener('change',renderList);
 
@@ -557,19 +624,35 @@ function initChips(sel){
 }
 function setMulti(sel,arr){ $$(sel+' button').forEach(b=>b.classList.toggle('on',(arr||[]).includes(b.dataset.v))); }
 function getMulti(sel){ return $$(sel+' button.on').map(b=>b.dataset.v); }
-function buildOptions(){
-  $('#chPlace').innerHTML=(settings.places||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
-  $('#chType').innerHTML=(settings.types||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
+function buildOptions(svc){
+  const sv=svc||formSvc||defSvc();
+  const cfg=settings[sv]||settings.kaigo;
+  $('#chPlace').innerHTML=(cfg.places||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
+  $('#chType').innerHTML=(cfg.types||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
+  $('#chFactor').innerHTML=(FACTORS[sv]||FACTORS.kaigo).map(f=>'<button data-v="'+esc(f[0])+'">'+esc(f[1])+'</button>').join('');
   initChips('#chPlace'); initChips('#chType');
-  const names=Array.from(new Set(reports.map(r=>r.person).filter(Boolean)));
+  $$('#chFactor button').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
+  $('#lblPerson').textContent = (sv==='jido') ? 'お子さんのお名前' : '利用者のお名前';
+  $('#lblFamily').textContent = (sv==='jido') ? '保護者へのご連絡' : 'ご家族へのご連絡';
+  const names=Array.from(new Set(reports.filter(r=>svcOf(r)===sv).map(r=>r.person).filter(Boolean)));
   $('#personList').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
 }
 initChips('#chKind'); initChips('#chInjury'); initChips('#chGov'); initChips('#chStatus');
-$$('#chFactor button').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
+$$('#chSvc button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#chSvc button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); formSvc=b.dataset.v;
+  const keepP=getChips('#chPlace'), keepT=getChips('#chType'), keepF=getMulti('#chFactor');
+  buildOptions(formSvc);
+  setChips('#chPlace',keepP); setChips('#chType',keepT); setMulti('#chFactor',keepF);
+}));
 
 function openRep(id){
   curRep = id ? reports.find(r=>r.id===id) : null;
   const r=curRep||{};
+  formSvc = curRep ? svcOf(curRep) : defSvc();
+  $('#wrapSvc').style.display = isBoth() ? '' : 'none';
+  setChips('#chSvc',formSvc);
+  buildOptions(formSvc);
   $('#repTitle').textContent = curRep ? '記録をなおす' : 'あたらしく記録する';
   $('#rDate').value=r.date||todayStr();
   $('#rTime').value=r.time||nowHM();
@@ -594,7 +677,7 @@ function openRep(id){
 $('#btnNew').addEventListener('click',()=>openRep(null));
 $('#repClose').addEventListener('click',()=>$('#dlgRep').close());
 function collectRep(){
-  return {date:$('#rDate').value||todayStr(),time:$('#rTime').value,
+  return {svc:formSvc||defSvc(),date:$('#rDate').value||todayStr(),time:$('#rTime').value,
     kind:getChips('#chKind')||'ヒヤリハット',place:getChips('#chPlace'),
     placeOther:$('#rPlaceOther').value.trim(),type:getChips('#chType'),
     person:$('#rPerson').value.trim(),situation:$('#rSituation').value.trim(),
@@ -626,7 +709,8 @@ $('#btnRepDel').addEventListener('click',async ()=>{
 function repHtml(r){
   const F=(l,v)=>'<tr><th>'+l+'</th><td>'+esc(v||'')+'</td></tr>';
   return '<div class="pg"><h2>'+(r.kind==='事故'?'事故報告書':'ヒヤリハット報告書')+'</h2>'+
-    '<table><tr><th>事業所</th><td>'+esc(settings.facility||'')+'</td><th>区分</th><td>'+esc(r.kind||'')+'</td></tr>'+
+    '<table><tr><th>事業所</th><td>'+esc(settings.facility||'')+(isBoth()?'（'+esc(SVC_NAME[svcOf(r)])+'）':'')+
+    '</td><th>区分</th><td>'+esc(r.kind||'')+'</td></tr>'+
     '<tr><th>発生日時</th><td>'+jpDate(r.date)+'　'+esc(r.time||'')+'</td>'+
     '<th>場所</th><td>'+esc(r.place||r.placeOther||'')+'</td></tr>'+
     '<tr><th>対象の方</th><td>'+esc(r.person||'')+'</td><th>種類</th><td>'+esc(r.type||'')+'</td></tr></table>'+
@@ -665,9 +749,9 @@ $('#btnCsv').addEventListener('click',()=>{
   const ym=$('#outMonth').value;
   const list=(ym?reports.filter(r=>r.date.slice(0,7)===ym):reports).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(!list.length){ toast('記録がありません'); return; }
-  const head=['日付','時刻','曜日','区分','場所','種類','お名前','ようす','けが','対応','家族連絡','連絡時刻',
+  const head=['日付','時刻','曜日','事業','区分','場所','種類','お名前','ようす','けが','対応','家族連絡','連絡時刻',
     '自治体報告','要因','要因の詳細','再発防止','記入者','管理者確認','状態'];
-  const rows=list.map(r=>[r.date,r.time||'',r.date?WD[wday(r.date)]:'',r.kind||'',r.place||r.placeOther||'',
+  const rows=list.map(r=>[r.date,r.time||'',r.date?WD[wday(r.date)]:'',SVC_NAME[svcOf(r)],r.kind||'',r.place||r.placeOther||'',
     r.type||'',r.person||'',r.situation||'',r.injury||'',r.action||'',r.family||'',r.familyTime||'',
     r.gov||'',(r.factors||[]).join(' / '),r.factorNote||'',r.prevention||'',r.reporter||'',r.checker||'',r.status||'']);
   const csv='\uFEFF'+[head].concat(rows).map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
@@ -722,9 +806,7 @@ $('#fileRestore').addEventListener('change',e=>{
 async function applyData(d){
   await idbClear('reports');
   for(const r of d.reports) await idbPut('reports',r);
-  settings=Object.assign({facility:'',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()},d.settings||{});
-  if(!Array.isArray(settings.places)||!settings.places.length) settings.places=DEF_PLACES.slice();
-  if(!Array.isArray(settings.types)||!settings.types.length) settings.types=DEF_TYPES.slice();
+  settings=normSettings(d.settings);
   await idbPut('meta',{k:'settings',v:settings});
   reports=d.reports.slice();
   fillSettings(); buildOptions(); renderList(); renderSum(); await stat();
@@ -732,17 +814,38 @@ async function applyData(d){
 async function stat(){ $('#dataStat').textContent='いまの保存数：'+reports.length+'件'; }
 function fillSettings(){
   $('#setFac').value=settings.facility||'';
-  $('#setPlaces').value=(settings.places||[]).join('\n');
-  $('#setTypes').value=(settings.types||[]).join('\n');
+  $('#setPlacesK').value=(settings.kaigo.places||[]).join('\n');
+  $('#setTypesK').value=(settings.kaigo.types||[]).join('\n');
+  $('#setPlacesJ').value=(settings.jido.places||[]).join('\n');
+  $('#setTypesJ').value=(settings.jido.types||[]).join('\n');
+  setChips('#chMode',settings.mode||'kaigo');
+  applyMode();
 }
+function applyMode(){
+  const m=settings.mode||'kaigo';
+  $('#setKaigo').style.display=(m==='jido')?'none':'';
+  $('#setJido').style.display=(m==='kaigo')?'none':'';
+  $('#hdKaigo').style.display=(m==='both')?'':'none';
+  $('#hdJido').style.display=(m==='both')?'':'none';
+  $('#svcFilters').style.display=(m==='both')?'':'none';
+  $('#sumSvcFilters').style.display=(m==='both')?'':'none';
+  $('#wrapSvc').style.display=(m==='both')?'':'none';
+  if(m!=='both'){ listSvc='all'; sumSvc='all'; }
+  formSvc=defSvc();
+}
+$$('#chMode button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#chMode button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); settings.mode=b.dataset.v; applyMode();
+}));
 $('#btnSaveSet').addEventListener('click',async ()=>{
   settings.facility=$('#setFac').value.trim();
-  const p=$('#setPlaces').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const t=$('#setTypes').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  settings.places=p.length?p:DEF_PLACES.slice();
-  settings.types=t.length?t:DEF_TYPES.slice();
+  const ln=el=>$(el).value.split('\n').map(x=>x.trim()).filter(Boolean);
+  settings.kaigo={places:arr(ln('#setPlacesK'),DEF_PLACES),types:arr(ln('#setTypesK'),DEF_TYPES)};
+  settings.jido={places:arr(ln('#setPlacesJ'),DEF_PLACES_J),types:arr(ln('#setTypesJ'),DEF_TYPES_J)};
+  settings=normSettings(settings);
   await idbPut('meta',{k:'settings',v:settings});
-  buildOptions(); toast('保存しました');
+  fillSettings(); buildOptions(); renderList(); renderSum();
+  toast('保存しました');
 });
 $('#btnClear').addEventListener('click',async ()=>{
   if(!confirm('この端末のすべての記録を消します。\n元にもどせません。よろしいですか？')) return;
@@ -757,43 +860,43 @@ function sampleData(){
   const t=todayStr();
   function d(n){ const p=t.split('-').map(Number); const dd=new Date(p[0],p[1]-1,p[2]-n);
     return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
-  const R=[
-    {id:'x1',date:d(3),time:'10:20',kind:'ヒヤリハット',place:'廊下',placeOther:'',type:'転倒・転落',
+  const K=[
+    {id:'k1',svc:'kaigo',date:d(3),time:'10:20',kind:'ヒヤリハット',place:'廊下',placeOther:'',type:'転倒・転落',
      person:'松本 静江',situation:'トイレから戻られる際、廊下のマットの端につまずかれ、手すりをつかんで持ちこたえられた。転倒はなし。',
      injury:'なし',action:'その場で座っていただき、看護師が全身を確認。痛みの訴えなし。マットは即時に撤去。',
      family:'不要と判断',familyTime:'',gov:'不要',factors:['環境','情報共有'],
      factorNote:'マットの端がめくれていたが、誰も気づいていなかった。朝の申し送りにも出ていない。',
      prevention:'廊下のマットは撤去する。毎朝の開所前点検の項目に「床の敷物」を加える。',
      reporter:'山田',checker:'佐藤',status:'対応おわり'},
-    {id:'x2',date:d(9),time:'10:45',kind:'ヒヤリハット',place:'浴室・脱衣室',placeOther:'',type:'転倒・転落',
+    {id:'k2',svc:'kaigo',date:d(9),time:'10:45',kind:'ヒヤリハット',place:'浴室・脱衣室',placeOther:'',type:'転倒・転落',
      person:'川上 定男',situation:'脱衣室の床が濡れており、足を滑らせかけた。職員が支えて転倒には至らず。',
      injury:'なし',action:'すぐに床を拭き、滑り止めマットを敷いた。',
      family:'不要と判断',familyTime:'',gov:'不要',factors:['環境','手順'],
      factorNote:'入浴の入れ替えが続き、床を拭く手が回っていなかった。',
      prevention:'入浴の入れ替えごとに床を拭くことを手順に入れる。担当を決める。',
      reporter:'鈴木',checker:'佐藤',status:'対応おわり'},
-    {id:'x3',date:d(16),time:'11:10',kind:'事故',place:'浴室・脱衣室',placeOther:'',type:'皮膚のはがれ・打撲',
+    {id:'k3',svc:'kaigo',date:d(16),time:'11:10',kind:'事故',place:'浴室・脱衣室',placeOther:'',type:'皮膚のはがれ・打撲',
      person:'沢田 きよ',situation:'機械浴からの移乗の際、右前腕がリフトの金具に触れ、5cmほど表皮がはがれた。',
      injury:'かすり傷・打撲',action:'看護師が洗浄し保護。ご家族に電話でご報告。翌日に受診の予定を相談。',
      family:'連絡した',familyTime:'11:40',gov:'不要',factors:['用具','手順'],
      factorNote:'金具にカバーが付いていなかった。移乗時に腕の位置を確認する手順がない。',
      prevention:'リフトの金具にカバーを取り付ける。移乗前に腕と足の位置を声に出して確認する。',
      reporter:'鈴木',checker:'佐藤',status:'報告した'},
-    {id:'x4',date:d(22),time:'14:30',kind:'ヒヤリハット',place:'食堂',placeOther:'',type:'誤嚥・むせこみ',
+    {id:'k4',svc:'kaigo',date:d(22),time:'14:30',kind:'ヒヤリハット',place:'食堂',placeOther:'',type:'誤嚥・むせこみ',
      person:'田島 正一',situation:'おやつのカステラで強くむせ込まれた。背中をさすり、まもなく落ち着かれた。',
      injury:'なし',action:'水分を少量ずつお出しし、様子を確認。看護師に報告。',
      family:'連絡した',familyTime:'16:10',gov:'不要',factors:['からだ','情報共有'],
      factorNote:'最近、飲み込みが弱くなっている様子があったが、記録に残っていなかった。',
      prevention:'おやつの形を見直す。飲み込みの様子を毎回記録に残し、担当者会議で共有する。',
      reporter:'山田',checker:'',status:'報告した'},
-    {id:'x5',date:d(28),time:'09:50',kind:'ヒヤリハット',place:'送迎車',placeOther:'',type:'送迎中のできごと',
+    {id:'k5',svc:'kaigo',date:d(28),time:'09:50',kind:'ヒヤリハット',place:'送迎車',placeOther:'',type:'送迎中のできごと',
      person:'岡田 茂',situation:'乗車時、シートベルトを締める前に車が動きかけた。運転手が気づいてすぐ停止。',
      injury:'なし',action:'全員の着席とベルトを確認してから発車し直した。',
      family:'不要と判断',familyTime:'',gov:'不要',factors:['手順','人手'],
      factorNote:'添乗の職員が別の方の介助をしており、確認の合図が出せていなかった。',
      prevention:'添乗者が「ベルトよし」と声に出して合図するまで発車しない、と決める。',
      reporter:'高橋',checker:'佐藤',status:'下書き'},
-    {id:'x6',date:d(40),time:'15:20',kind:'ヒヤリハット',place:'トイレ',placeOther:'',type:'転倒・転落',
+    {id:'k6',svc:'kaigo',date:d(40),time:'15:20',kind:'ヒヤリハット',place:'トイレ',placeOther:'',type:'転倒・転落',
      person:'松本 静江',situation:'便座から立ち上がる際にふらつかれ、壁に手をついて支えられた。',
      injury:'なし',action:'職員が付き添い、居室まで誘導。',
      family:'不要と判断',familyTime:'',gov:'不要',factors:['からだ','人手'],
@@ -801,8 +904,54 @@ function sampleData(){
      prevention:'立ち上がりに不安のある方は、午後も必ず付き添う。手すりの位置を検討する。',
      reporter:'山田',checker:'佐藤',status:'対応おわり'}
   ];
+  const J=[
+    {id:'j1',svc:'jido',date:d(2),time:'17:30',kind:'ヒヤリハット',place:'送迎車',placeOther:'',type:'送迎車への置き去り',
+     person:'たっくん',situation:'お送りの最終便で、いちばん後ろの席で眠っていたところに気づかず、降車の確認をしかけた。運転手が座席を見回して気づいた。',
+     injury:'なし',action:'その場で起こし、ご自宅までお送りした。管理者にすぐ報告。',
+     family:'連絡した',familyTime:'18:00',gov:'不要',factors:['手順','人手'],
+     factorNote:'降車後の車内点検を、決めごとにしていなかった。最終便は職員が一人だった。',
+     prevention:'降車後に必ず最後列まで見て回り、点検表に署名する。最終便は必ず二人で乗る。',
+     reporter:'佐藤',checker:'田中',status:'対応おわり'},
+    {id:'j2',svc:'jido',date:d(6),time:'16:10',kind:'ヒヤリハット',place:'玄関',placeOther:'',type:'離設・飛び出し',
+     person:'りょうくん',situation:'来客が出入りした際、施錠が外れたままの玄関から一人で外へ出ようとされた。職員が声をかけて止まった。',
+     injury:'なし',action:'室内へお戻りいただき、玄関を施錠。全職員に周知。',
+     family:'連絡した',familyTime:'17:20',gov:'不要',factors:['環境','手順'],
+     factorNote:'来客対応のあと、施錠を戻す担当が決まっていなかった。',
+     prevention:'玄関に補助錠を付ける。来客対応をした職員が施錠を戻し、声に出して確認する。',
+     reporter:'山本',checker:'田中',status:'報告した'},
+    {id:'j3',svc:'jido',date:d(11),time:'16:40',kind:'事故',place:'活動室',placeOther:'',type:'噛みつき・ひっかき',
+     person:'けんちゃん',situation:'ブロックの取り合いになり、お友だちの腕を噛んでしまった。歯型が残り、赤みが出た。',
+     injury:'かすり傷・打撲',action:'すぐに引き離し、患部を冷やす。双方の保護者にお電話でご報告した。',
+     family:'連絡した',familyTime:'17:30',gov:'不要',factors:['人手','からだ'],
+     factorNote:'おやつ前で気持ちが高ぶりやすい時間帯。職員が二人とも別の対応に入っていた。',
+     prevention:'おやつ前は必ず一人がフロア全体を見る。取り合いになりやすい玩具は数をそろえる。',
+     reporter:'山本',checker:'田中',status:'報告した'},
+    {id:'j4',svc:'jido',date:d(17),time:'16:25',kind:'ヒヤリハット',place:'園庭・屋外',placeOther:'',type:'遊具からの落下',
+     person:'まーくん',situation:'うんていの途中で手が滑り、落ちかけたところを職員が支えた。',
+     injury:'なし',action:'いったん遊具から降りていただき、休憩をとった。',
+     family:'不要と判断',familyTime:'',gov:'不要',factors:['環境','からだ'],
+     factorNote:'雨あがりでうんていが濡れていた。',
+     prevention:'雨あがりは遊具を拭いてから使う。うんていは職員が付いたときだけ使う。',
+     reporter:'佐藤',checker:'田中',status:'対応おわり'},
+    {id:'j5',svc:'jido',date:d(24),time:'16:50',kind:'ヒヤリハット',place:'活動室',placeOther:'',type:'誤食・アレルギー',
+     person:'さーちゃん',situation:'おやつの配り間違いで、卵を含むお菓子に手が伸びた。口に入る前に職員が気づいて止めた。',
+     injury:'なし',action:'すぐに下げて、別のおやつに交換。管理者と保護者に報告した。',
+     family:'連絡した',familyTime:'17:40',gov:'不要',factors:['手順','情報共有'],
+     factorNote:'おやつの配膳表はあるが、配る前に確認する決めごとがなかった。',
+     prevention:'アレルギーのあるお子さんは、トレーの色を分ける。配る前に二人で読み合わせる。',
+     reporter:'山本',checker:'田中',status:'対応おわり'},
+    {id:'j6',svc:'jido',date:d(33),time:'15:05',kind:'ヒヤリハット',place:'学校',placeOther:'',type:'離設・飛び出し',
+     person:'そらくん',situation:'学校へのお迎えで、指定の場所に姿がなく、5分ほど所在が分からなくなった。昇降口の裏で待っておられた。',
+     injury:'なし',action:'学校の先生と手分けして探し、発見。保護者に状況をご報告。',
+     family:'連絡した',familyTime:'16:00',gov:'不要',factors:['情報共有','手順'],
+     factorNote:'その日だけ待ち合わせ場所が変わっていたが、事業所に伝わっていなかった。',
+     prevention:'待ち合わせ場所が変わるときは、学校と事業所で前日までに確認する。見つからない場合の連絡手順を決める。',
+     reporter:'佐藤',checker:'田中',status:'対応おわり'}
+  ];
+  const m=settings.mode||'kaigo';
+  const R = (m==='jido') ? J : (m==='both') ? K.concat(J) : K;
   return {app:'hiyari-techo',ver:1,reports:R,
-    settings:{facility:'デイサービス みどりの里',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()}};
+    settings:Object.assign({},settings,{facility:settings.facility||'みどりの里'})};
 }
 $('#btnSample').addEventListener('click',async ()=>{
   if(reports.length&&!confirm('いまのデータをすべて置き換えて、サンプルを入れます。\nよろしいですか？')) return;
@@ -828,11 +977,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',async ()=>{
   catch(e){ alert('この端末では記録を保存できません。ブラウザの設定をご確認ください。'); return; }
   reports=await idbAll('reports');
   const st=await idbGet('meta','settings');
-  if(st&&st.v){
-    settings=Object.assign(settings,st.v);
-    if(!Array.isArray(settings.places)||!settings.places.length) settings.places=DEF_PLACES.slice();
-    if(!Array.isArray(settings.types)||!settings.types.length) settings.types=DEF_TYPES.slice();
-  }
+  if(st&&st.v) settings=normSettings(st.v);
   fillSettings(); buildOptions();
   $('#outMonth').value=todayStr().slice(0,7);
   renderList(); renderSum(); await stat();
