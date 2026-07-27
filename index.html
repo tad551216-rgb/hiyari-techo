@@ -148,6 +148,14 @@ table.tbl th,table.tbl td{border:1px solid var(--line);padding:6px 7px;text-alig
 table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 
+input.masked{-webkit-text-security:disc;}
+input.masked.show{-webkit-text-security:none;}
+.sendbox{background:var(--white);border:2px solid var(--verm);border-radius:11px;padding:12px;margin-top:12px;}
+.sendbox textarea{width:100%;border:none;background:none;min-height:90px;resize:vertical;
+  font-family:ui-monospace,monospace;font-size:12px;line-height:1.6;}
+.confirm{background:var(--gold2);border:2px solid #E8DBBB;border-radius:11px;padding:14px;margin-top:12px;}
+.confirm b{display:block;font-size:calc(15px);color:var(--gold);margin-bottom:6px;}
+.confirm p{font-size:13px;color:var(--ink2);line-height:1.9;margin-bottom:11px;}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
   background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;
   opacity:0;pointer-events:none;transition:.22s;z-index:100;max-width:88vw;text-align:center;}
@@ -229,6 +237,27 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
 
   <!-- 出力 -->
   <section class="page" id="p-out">
+    <h2 class="sec">管理者へ送る</h2>
+    <div class="card" id="sendCard">
+      <div class="warnbox" style="margin-bottom:12px;">
+        ヒヤリハットの記録には、お名前・けが・体調など、<b>とくに大切に扱うべき内容</b>が含まれます。そのままLINEで送ることはできません。<b>かならず合言葉で包んでからお送りください。</b>
+      </div>
+      <p class="note" id="sendCount" style="margin-bottom:10px;">—</p>
+      <button class="btn v wide big" id="btnPack" style="padding:15px;font-size:15px;">🔒 合言葉で包んで送る</button>
+      <div id="packOut"></div>
+      <div id="confirmPanel"></div>
+    </div>
+
+    <h2 class="sec">管理者：受け取る</h2>
+    <div class="card">
+      <p class="note" style="margin-bottom:10px;">職員の方から届いた文を、そのまま下の枠に貼り付けてください。<b>いまある記録に足しこみます</b>（消えることはありません）。</p>
+      <div class="fld" style="margin-bottom:10px;">
+        <textarea id="inBundle" placeholder="ここに貼り付けてください" style="min-height:110px;font-family:ui-monospace,monospace;font-size:12.5px;"></textarea>
+      </div>
+      <button class="btn g wide" id="btnUnpack">📥 取り込む</button>
+      <div id="unpackOut"></div>
+    </div>
+
     <h2 class="sec">報告書の印刷</h2>
     <div class="card">
       <div class="fld"><label for="outMonth">対象の月</label><input type="month" id="outMonth"></div>
@@ -238,7 +267,7 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
 
     <h2 class="sec">会議用のまとめ</h2>
     <div class="card">
-      <p class="note" style="margin-bottom:9px;">集計タブの期間で、会議に貼れる文章をつくります。</p>
+      <p class="note" style="margin-bottom:9px;">集計タブの期間で、会議に貼れる文章をつくります。件数と傾向だけで、お名前は入りません。<b>再発防止のところにお名前を書いていないか</b>だけ、お確かめのうえお使いください。</p>
       <div class="outbox" id="meetText">—</div>
       <div class="row" style="margin-top:10px;">
         <button class="btn sm" id="btnMeetCopy">📋 コピー</button>
@@ -248,6 +277,7 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
 
     <h2 class="sec">バックアップ</h2>
     <div class="card">
+      <div class="warnbox" style="margin-bottom:11px;">このJSONファイルは<b>包まれていない</b>ため、そのままLINEやメールで送らないでください。<br>職員の方から管理者へお渡しするときは、上の<b>「管理者へ送る」</b>をお使いください。<br>ファイルのまま送る必要があるときは、<a href="https://tad551216-rgb.github.io/himitsu-folder/" target="_blank" rel="noopener" style="color:inherit;font-weight:700;">秘密フォルダⅡ</a>で暗号化してからお送りください。<b>PINは、ファイルとは別の方法でお伝えください。</b></div>
       <p class="note" style="margin-bottom:9px;">事故の記録は<b>5年間</b>の保存を求められる場合があります。保存の年数は自治体によって異なりますので、必ずご確認ください。月に一度はファイルに保存し、別の場所にも控えを置いてください。</p>
       <button class="btn wide" id="btnBackup">💾 すべてJSONで保存する</button>
       <button class="btn wide" id="btnRestore">📥 JSONから復元する</button>
@@ -258,6 +288,18 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
     <h2 class="sec">設定</h2>
     <div class="card">
       <div class="fld"><label for="setFac">事業所の名前</label><input type="text" id="setFac"></div>
+      <div class="fld">
+        <label for="setDevice">この端末の名前（誰の端末か）</label>
+        <input type="text" id="setDevice" placeholder="例：山田／フロア用タブレット">
+      </div>
+      <div class="fld">
+        <label for="setKey">共有の合言葉（事業所の中だけで決めるもの）</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="setKey" class="masked" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0;">
+          <button type="button" class="btn sm" id="keyEye" style="flex:none;">見る</button>
+        </div>
+        <p class="note" style="margin-top:6px;">職員の端末と管理者の端末で、<b>同じ合言葉</b>を入れてください。合言葉は口頭や紙でお伝えし、<b>記録と同じLINEでは送らないで</b>ください。</p>
+      </div>
       <div class="fld">
         <label>この事業所でおこなっているもの</label>
         <div class="chips" id="chMode">
@@ -335,7 +377,8 @@ table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
       </div>
       <div class="fld"><label for="rPerson" id="lblPerson">利用者のお名前</label>
         <input type="text" id="rPerson" list="personList" placeholder="例：松本 静江">
-        <datalist id="personList"></datalist></div>
+        <datalist id="personList"></datalist>
+        <p class="note" id="personHint" style="margin-top:5px;"></p></div>
       <div class="fld"><label for="rSituation">そのときのようす（見たままを書いてください）</label>
         <textarea id="rSituation" placeholder="例：トイレから戻られる際、廊下のマットの端につまずかれ、手すりをつかんで持ちこたえられた。転倒はなし。"></textarea></div>
 
@@ -428,6 +471,40 @@ function idbAll(s){ return new Promise((res,rej)=>{const r=tx(s,'readonly').getA
 function idbGet(s,k){ return new Promise((res,rej)=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}); }
 function idbClear(s){ return new Promise((res,rej)=>{const r=tx(s,'readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);}); }
 
+/* ===== 合言葉で包む・ほどく（おうち連絡帖と同じ考え方） ===== */
+const MARK='HIYARI1:';
+const _enc=new TextEncoder(), _dec=new TextDecoder();
+function b64(buf){ const b=new Uint8Array(buf); let s=''; for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function unb64(str){ const s=atob(str), a=new Uint8Array(s.length); for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a; }
+async function keyOf(pass,salt){
+  const base=await crypto.subtle.importKey('raw',_enc.encode(String(pass).normalize('NFC')),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:200000,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function wrap(text,pass){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const k=await keyOf(pass,salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},k,_enc.encode(text));
+  const all=new Uint8Array(28+ct.byteLength);
+  all.set(salt,0); all.set(iv,16); all.set(new Uint8Array(ct),28);
+  return MARK+b64(all);
+}
+async function unwrap(packed,pass){
+  const src=String(packed);
+  const i=src.indexOf(MARK);
+  if(i<0) throw new Error('format');
+  const m=src.slice(i+MARK.length).match(/^[\sA-Za-z0-9+/=]+/);
+  if(!m) throw new Error('format');
+  const body=m[0].replace(/\s/g,'');
+  if(!body) throw new Error('format');
+  const all=unb64(body);
+  if(all.length<29) throw new Error('format');
+  const k=await keyOf(pass,all.slice(0,16));
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(16,28)},k,all.slice(28));
+  return _dec.decode(pt);
+}
+
 const DEF_PLACES=['居室・フロア','廊下','トイレ','浴室・脱衣室','食堂','玄関','送迎車','屋外','機能訓練室','階段'];
 const DEF_TYPES=['転倒・転落','ずり落ち','誤薬・薬の飲み忘れ','誤嚥・むせこみ','皮膚のはがれ・打撲',
   '衝突・ぶつかり','行方が分からなくなる','送迎中のできごと','食事の間違い','異食','その他'];
@@ -446,7 +523,9 @@ let curRep=null, listFilter='all', listSvc='all', sumSvc='all', formSvc='kaigo';
 
 function arr(a,d){ return (Array.isArray(a)&&a.length)?a.slice():d.slice(); }
 function normSettings(v){
-  const s=Object.assign({facility:'',mode:'kaigo'},v||{});
+  const s=Object.assign({facility:'',mode:'kaigo',device:'',shareKey:'',pending:[],pendingAt:'',deviceId:''},v||{});
+  if(!s.deviceId) s.deviceId=Math.random().toString(36).slice(2,7);
+  if(!Array.isArray(s.pending)) s.pending=[];
   // 以前の形（places/types だけ）からの引き継ぎ
   if(!s.kaigo && Array.isArray(s.places)) s.kaigo={places:s.places,types:s.types};
   s.kaigo=Object.assign({},s.kaigo||{});
@@ -590,6 +669,8 @@ function renderList(){
       (r.situation?'<br>'+esc(r.situation.slice(0,60))+(r.situation.length>60?'…':''):'')+'</div>'+
       '<div class="rfoot">'+
       (isBoth()?'<span class="tag">'+esc(SVC_NAME[svcOf(r)])+'</span>':'')+
+      ((settings.pending||[]).indexOf(r.id)>=0?'<span class="tag v">送信ずみ・確認まち</span>':'')+
+      (r.device?'<span class="tag">'+esc(r.device)+'</span>':'')+
       (r.injury&&r.injury!=='なし'?'<span class="tag v">'+esc(r.injury)+'</span>':'')+
       (r.gov==='要'?'<span class="tag v">自治体報告 要</span>':'')+
       (r.gov==='済'?'<span class="tag g">自治体報告 済</span>':'')+
@@ -632,7 +713,12 @@ function buildOptions(svc){
   $('#chFactor').innerHTML=(FACTORS[sv]||FACTORS.kaigo).map(f=>'<button data-v="'+esc(f[0])+'">'+esc(f[1])+'</button>').join('');
   initChips('#chPlace'); initChips('#chType');
   $$('#chFactor button').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
-  $('#lblPerson').textContent = (sv==='jido') ? 'お子さんのお名前' : '利用者のお名前';
+  $('#lblPerson').textContent = (sv==='jido') ? 'お子さんの呼び名（ニックネーム）' : '利用者のお名前';
+  $('#rPerson').placeholder = (sv==='jido') ? '例：たっくん' : '例：松本 静江';
+  const hint=$('#personHint');
+  if(hint) hint.innerHTML = (sv==='jido')
+    ? '本名ではなく、<b>事業所で使っている呼び名</b>でお書きください。'
+    : '送るときは<b>合言葉で包まれます</b>が、LINEに平文で貼らないようご注意ください。';
   $('#lblFamily').textContent = (sv==='jido') ? '保護者へのご連絡' : 'ご家族へのご連絡';
   const names=Array.from(new Set(reports.filter(r=>svcOf(r)===sv).map(r=>r.person).filter(Boolean)));
   $('#personList').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
@@ -691,8 +777,15 @@ function collectRep(){
 $('#btnRepSave').addEventListener('click',async ()=>{
   const d=collectRep();
   if(!d.type&&!d.situation){ toast('できごとの種類か、ようすを入れてください'); return; }
+  d.updatedAt=new Date().toISOString();
   if(curRep){ Object.assign(curRep,d); await idbPut('reports',curRep); }
-  else { const rec=Object.assign({id:'r'+(++seq)+'_'+Date.now()},d); reports.push(rec); await idbPut('reports',rec); }
+  else {
+    const rec=Object.assign({
+      id:'r'+(settings.deviceId||'x')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+      device:settings.device||''
+    },d);
+    reports.push(rec); await idbPut('reports',rec);
+  }
   $('#dlgRep').close(); buildOptions(); renderList(); renderSum(); await stat();
   toast('保存しました');
 });
@@ -779,6 +872,119 @@ $('#btnMeetShare').addEventListener('click',()=>{
   else copyText(t).then(()=>toast('コピーしました'));
 });
 
+/* ===== 管理者と共有する ===== */
+function unsentList(){
+  const p=settings.pending||[];
+  return reports.filter(r=>p.indexOf(r.id)<0);
+}
+function renderSend(){
+  const un=unsentList(), p=settings.pending||[];
+  $('#sendCount').innerHTML= p.length
+    ? '<b>'+p.length+'件</b>を'+(settings.pendingAt||'')+'に送りました。下のご確認をお願いします。'+
+      (un.length?'<br>そのあとに書いた記録が <b>'+un.length+'件</b> あります。':'')
+    : (un.length? 'まだ送っていない記録が <b>'+un.length+'件</b> あります。' : 'まだ送っていない記録はありません。');
+  $('#btnPack').disabled = un.length===0;
+  renderConfirm();
+}
+function renderConfirm(){
+  const p=settings.pending||[];
+  if(!p.length){ $('#confirmPanel').innerHTML=''; return; }
+  const still=reports.filter(r=>p.indexOf(r.id)>=0).length;
+  if(!still){ $('#confirmPanel').innerHTML=''; settings.pending=[]; return; }
+  $('#confirmPanel').innerHTML='<div class="confirm">'+
+    '<b>管理者は、取り込みを終えられましたか？</b>'+
+    '<p>管理者の端末で「取り込む」を押して、<b>件数が表示されたことをご確認ください</b>。<br>'+
+    '確認できてから、この端末に残っている '+still+'件 を消します。<br>'+
+    '<b>確認できていないうちは、消さないでください。</b></p>'+
+    '<div class="row">'+
+    '<button class="btn" id="btnNotYet">まだです</button>'+
+    '<button class="btn v" id="btnConfirmDel" style="flex:2;">確認できました。この端末から消す</button>'+
+    '</div></div>';
+  $('#btnNotYet').addEventListener('click',()=>{
+    if(!confirm('送るのを取りやめます。\n記録はこの端末に残り、もう一度送れるようになります。\nよろしいですか？')) return;
+    settings.pending=[]; settings.pendingAt='';
+    idbPut('meta',{k:'settings',v:settings});
+    $('#packOut').innerHTML=''; renderSend(); renderList();
+    toast('取りやめました。記録は残っています');
+  });
+  $('#btnConfirmDel').addEventListener('click',async ()=>{
+    if(!confirm('管理者が取り込んだことを確認できましたか？\n\nこの端末から '+still+'件 を消します。\nこの操作は元にもどせません。')) return;
+    if(!confirm('本当によろしいですか？\n管理者の端末に記録があることを、もう一度お確かめください。')) return;
+    for(const id of settings.pending){ await idbDel('reports',id); }
+    reports=reports.filter(r=>settings.pending.indexOf(r.id)<0);
+    settings.pending=[]; settings.pendingAt='';
+    await idbPut('meta',{k:'settings',v:settings});
+    $('#packOut').innerHTML='';
+    renderSend(); renderList(); renderSum(); await stat();
+    toast('この端末から消しました');
+  });
+}
+$('#btnPack').addEventListener('click',async ()=>{
+  const key=settings.shareKey||'';
+  if(!key){ toast('設定タブで、共有の合言葉を決めてください'); return; }
+  if(!window.crypto||!crypto.subtle){ toast('この画面では包めません。https:// でお開きください'); return; }
+  const un=unsentList();
+  if(!un.length){ toast('送る記録がありません'); return; }
+  let packed;
+  try{
+    packed=await wrap(JSON.stringify({app:'hiyari-techo',kind:'bundle',
+      from:settings.device||'（名前なし）',at:new Date().toISOString(),reports:un}),key);
+  }catch(e){ toast('うまく包めませんでした'); return; }
+  const head='【'+(settings.facility||'')+'】ヒヤリハットの記録 '+un.length+'件（'+(settings.device||'')+'より）';
+  const send=head+'\n'+packed+'\n（ヒヤリハット帖の「管理者：受け取る」に貼り付けてください）';
+  settings.pending=un.map(r=>r.id);
+  settings.pendingAt=todayStr()+' '+new Date().toTimeString().slice(0,5);
+  await idbPut('meta',{k:'settings',v:settings});
+  $('#packOut').innerHTML='<div class="sendbox"><textarea readonly>'+esc(send)+'</textarea>'+
+    '<div class="row" style="margin-top:10px;">'+
+    '<button class="btn v" id="btnSendShare">📤 送る（LINEなど）</button>'+
+    '<button class="btn" id="btnSendCopy">📋 コピー</button></div></div>';
+  $('#btnSendShare').addEventListener('click',()=>{
+    if(navigator.share) navigator.share({text:send}).catch(()=>{});
+    else copyText(send).then(()=>toast('コピーしました。貼り付けてお送りください'));
+  });
+  $('#btnSendCopy').addEventListener('click',()=>copyText(send).then(()=>toast('コピーしました')));
+  renderSend(); renderList();
+  toast('包みました。お送りください');
+});
+$('#btnUnpack').addEventListener('click',async ()=>{
+  const raw=$('#inBundle').value.trim();
+  if(!raw){ toast('貼り付けてください'); return; }
+  const key=settings.shareKey||'';
+  if(!key){ toast('設定タブで、共有の合言葉を入れてください'); return; }
+  if(raw.indexOf(MARK)<0){
+    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">包まれた中身が見あたりません。届いた文の全体を、そのまま貼り付けてみてください。</div>';
+    return;
+  }
+  let obj;
+  try{
+    obj=JSON.parse(await unwrap(raw,key));
+  }catch(e){
+    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;"><b>合言葉が合わないようです。</b><br>'+
+      '職員の端末と管理者の端末で、同じ合言葉になっているかお確かめください。</div>';
+    return;
+  }
+  if(!obj||obj.app!=='hiyari-techo'||!Array.isArray(obj.reports)){
+    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">ヒヤリハット帖の記録ではないようです。</div>';
+    return;
+  }
+  let add=0,upd=0,dup=0;
+  for(const r of obj.reports){
+    if(!r||!r.id) continue;
+    const ex=reports.find(x=>x.id===r.id);
+    if(!ex){ reports.push(r); await idbPut('reports',r); add++; }
+    else if((r.updatedAt||'')>(ex.updatedAt||'')){ Object.assign(ex,r); await idbPut('reports',ex); upd++; }
+    else dup++;
+  }
+  $('#inBundle').value='';
+  $('#unpackOut').innerHTML='<div class="okbox" style="margin-top:11px;"><b>'+
+    esc(obj.from||'')+' さんから '+obj.reports.length+'件 を受け取りました。</b><br>'+
+    'あたらしく入ったもの：'+add+'件<br>上書きしたもの：'+upd+'件<br>すでにあったもの：'+dup+'件<br>'+
+    '<b>この画面を、送ってくださった方にお見せください。</b></div>';
+  buildOptions(); renderList(); renderSum(); renderSend(); await stat();
+  toast('取り込みました');
+});
+
 /* ===== バックアップ・設定 ===== */
 $('#btnBackup').addEventListener('click',async ()=>{
   const data={app:'hiyari-techo',ver:1,reports:reports,settings:settings};
@@ -809,11 +1015,13 @@ async function applyData(d){
   settings=normSettings(d.settings);
   await idbPut('meta',{k:'settings',v:settings});
   reports=d.reports.slice();
-  fillSettings(); buildOptions(); renderList(); renderSum(); await stat();
+  fillSettings(); buildOptions(); renderList(); renderSum(); renderSend(); await stat();
 }
 async function stat(){ $('#dataStat').textContent='いまの保存数：'+reports.length+'件'; }
 function fillSettings(){
   $('#setFac').value=settings.facility||'';
+  $('#setDevice').value=settings.device||'';
+  $('#setKey').value=settings.shareKey||'';
   $('#setPlacesK').value=(settings.kaigo.places||[]).join('\n');
   $('#setTypesK').value=(settings.kaigo.types||[]).join('\n');
   $('#setPlacesJ').value=(settings.jido.places||[]).join('\n');
@@ -837,14 +1045,20 @@ $$('#chMode button').forEach(b=>b.addEventListener('click',()=>{
   $$('#chMode button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); settings.mode=b.dataset.v; applyMode();
 }));
+$('#keyEye').addEventListener('click',()=>{
+  const i=$('#setKey'); i.classList.toggle('show');
+  $('#keyEye').textContent=i.classList.contains('show')?'隠す':'見る';
+});
 $('#btnSaveSet').addEventListener('click',async ()=>{
   settings.facility=$('#setFac').value.trim();
+  settings.device=$('#setDevice').value.trim();
+  settings.shareKey=$('#setKey').value;
   const ln=el=>$(el).value.split('\n').map(x=>x.trim()).filter(Boolean);
   settings.kaigo={places:arr(ln('#setPlacesK'),DEF_PLACES),types:arr(ln('#setTypesK'),DEF_TYPES)};
   settings.jido={places:arr(ln('#setPlacesJ'),DEF_PLACES_J),types:arr(ln('#setTypesJ'),DEF_TYPES_J)};
   settings=normSettings(settings);
   await idbPut('meta',{k:'settings',v:settings});
-  fillSettings(); buildOptions(); renderList(); renderSum();
+  fillSettings(); buildOptions(); renderList(); renderSum(); renderSend();
   toast('保存しました');
 });
 $('#btnClear').addEventListener('click',async ()=>{
@@ -967,7 +1181,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',async ()=>{
   $('#p-'+b.dataset.tab).classList.add('on');
   if(b.dataset.tab==='list') renderList();
   if(b.dataset.tab==='sum') renderSum();
-  if(b.dataset.tab==='out'){ renderSum(); await stat(); }
+  if(b.dataset.tab==='out'){ renderSum(); renderSend(); await stat(); }
   window.scrollTo(0,0);
 }));
 
@@ -980,7 +1194,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',async ()=>{
   if(st&&st.v) settings=normSettings(st.v);
   fillSettings(); buildOptions();
   $('#outMonth').value=todayStr().slice(0,7);
-  renderList(); renderSum(); await stat();
+  renderList(); renderSum(); renderSend(); await stat();
 })();
 
 if('serviceWorker' in navigator){
