@@ -156,12 +156,25 @@ input.masked.show{-webkit-text-security:none;}
 .confirm{background:var(--gold2);border:2px solid #E8DBBB;border-radius:11px;padding:14px;margin-top:12px;}
 .confirm b{display:block;font-size:calc(15px);color:var(--gold);margin-bottom:6px;}
 .confirm p{font-size:13px;color:var(--ink2);line-height:1.9;margin-bottom:11px;}
+.qrwrap{text-align:center;}
+.qrwrap canvas{width:min(86vw,420px);height:auto;background:#fff;border:10px solid #fff;
+  border-radius:8px;box-shadow:0 2px 8px rgba(27,42,74,.18);}
+.qrstep{font-size:19px;font-weight:700;margin:12px 0 4px;}
+.qrbar{display:flex;gap:4px;justify-content:center;margin:8px 0 4px;flex-wrap:wrap;}
+.qrbar i{width:26px;height:8px;border-radius:4px;background:var(--line2);font-style:normal;}
+.qrbar i.on{background:var(--green);}
+.qrhint{font-size:13px;color:var(--muted);line-height:1.9;margin-top:8px;}
+.scanwrap{position:relative;background:#000;border-radius:12px;overflow:hidden;}
+.scanwrap video{width:100%;display:block;max-height:60vh;object-fit:cover;}
+.scanwrap .frame{position:absolute;inset:12%;border:3px solid rgba(255,255,255,.85);border-radius:14px;pointer-events:none;}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
   background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;
   opacity:0;pointer-events:none;transition:.22s;z-index:100;max-width:88vw;text-align:center;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;}}
 </style>
+<script src="qrcode.js"></script>
+<script src="jsQR.js"></script>
 </head>
 <body>
 
@@ -243,18 +256,27 @@ input.masked.show{-webkit-text-security:none;}
         ヒヤリハットの記録には、お名前・けが・体調など、<b>とくに大切に扱うべき内容</b>が含まれます。そのままLINEで送ることはできません。<b>かならず合言葉で包んでからお送りください。</b>
       </div>
       <p class="note" id="sendCount" style="margin-bottom:10px;">—</p>
-      <button class="btn v wide big" id="btnPack" style="padding:15px;font-size:15px;">🔒 合言葉で包んで送る</button>
+      <div class="row" style="margin-bottom:8px;">
+        <button class="btn v big" id="btnQrSend" style="flex:2;padding:15px;font-size:15px;">📱 QRコードで渡す</button>
+        <button class="btn" id="btnPack">🔒 包んで送る（LINEなど）</button>
+      </div>
+      <p class="note" style="margin-bottom:10px;">
+        <b>おすすめはQRコードです。</b>管理者の端末のカメラで読み取るだけで渡せます。
+        インターネットにもLINEにも、いっさい流れません。
+      </p>
       <div id="packOut"></div>
       <div id="confirmPanel"></div>
     </div>
 
     <h2 class="sec">管理者：受け取る</h2>
     <div class="card">
-      <p class="note" style="margin-bottom:10px;">職員の方から届いた文を、そのまま下の枠に貼り付けてください。<b>いまある記録に足しこみます</b>（消えることはありません）。</p>
+      <button class="btn v wide big" id="btnQrScan" style="padding:15px;font-size:15px;margin-bottom:12px;">📷 カメラでQRコードを読み取る</button>
+      <p class="note" style="margin-bottom:12px;">職員の端末に出ているQRコードに、カメラを向けてください。何枚かに分かれている場合も、そのまま持っていれば全部そろいます。</p>
+      <p class="note" style="margin-bottom:10px;">LINEなどで届いた文から取り込むときは、下の枠に貼り付けてください。<b>どちらの方法でも、いまある記録に足しこみます</b>（消えることはありません）。</p>
       <div class="fld" style="margin-bottom:10px;">
         <textarea id="inBundle" placeholder="ここに貼り付けてください" style="min-height:110px;font-family:ui-monospace,monospace;font-size:12.5px;"></textarea>
       </div>
-      <button class="btn g wide" id="btnUnpack">📥 取り込む</button>
+      <button class="btn g wide" id="btnUnpack">📥 貼り付けた文から取り込む</button>
       <div id="unpackOut"></div>
     </div>
 
@@ -442,6 +464,38 @@ input.masked.show{-webkit-text-security:none;}
   </div>
 </dialog>
 
+<!-- QRを見せる -->
+<dialog id="dlgQrSend">
+  <div class="sheet" style="width:min(560px,94vw);">
+    <div class="sheet-head"><b>QRコードで渡す</b><button id="qrSendClose">閉じる</button></div>
+    <div class="sheet-body qrwrap">
+      <canvas id="qrCanvas" width="640" height="640"></canvas>
+      <p class="qrstep" id="qrStep">—</p>
+      <div class="qrbar" id="qrBar"></div>
+      <p class="qrhint" id="qrHint"></p>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" id="qrSlower">おそく</button>
+        <button class="btn" id="qrPause">とめる</button>
+        <button class="btn" id="qrFaster">はやく</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- QRを読み取る -->
+<dialog id="dlgQrScan">
+  <div class="sheet" style="width:min(560px,94vw);">
+    <div class="sheet-head"><b>QRコードを読み取る</b><button id="qrScanClose">閉じる</button></div>
+    <div class="sheet-body">
+      <div class="scanwrap"><video id="scanVideo" playsinline muted></video><div class="frame"></div></div>
+      <p class="qrstep" id="scanStep" style="text-align:center;">カメラを向けてください</p>
+      <div class="qrbar" id="scanBar"></div>
+      <p class="qrhint" id="scanHint" style="text-align:center;">読み取れた分から順にたまっていきます。全部そろうと、自動で取り込みます。</p>
+      <div id="scanOut"></div>
+    </div>
+  </div>
+</dialog>
+
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -481,6 +535,50 @@ async function keyOf(pass,salt){
   return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:200000,hash:'SHA-256'},
     base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
+const MARK2='HIYARI2:';
+async function deflateRaw(str){
+  if(typeof CompressionStream==='undefined') return null;
+  try{
+    const cs=new CompressionStream('deflate-raw');
+    const w=cs.writable.getWriter();
+    w.write(new TextEncoder().encode(str)); w.close();
+    return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+  }catch(e){ return null; }
+}
+async function inflateRaw(bytes){
+  const ds=new DecompressionStream('deflate-raw');
+  const w=ds.writable.getWriter();
+  w.write(bytes); w.close();
+  return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+}
+/* [1バイトの目印][salt16][iv12][本体]  目印 0=そのまま 1=圧縮あり */
+async function wrap2(text,pass){
+  const z=await deflateRaw(text);
+  const flag=z?1:0;
+  const data=z||new TextEncoder().encode(text);
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const k=await keyOf(pass,salt);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},k,data));
+  const all=new Uint8Array(1+16+12+ct.length);
+  all[0]=flag; all.set(salt,1); all.set(iv,17); all.set(ct,29);
+  return b64(all);
+}
+async function unwrap2(body,pass){
+  const all=unb64(body);
+  if(all.length<30) throw new Error('format');
+  const flag=all[0];
+  const k=await keyOf(pass,all.slice(1,17));
+  const pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(17,29)},k,all.slice(29)));
+  return flag===1 ? await inflateRaw(pt) : new TextDecoder().decode(pt);
+}
+function bodyOf(packed,mark){
+  const i=String(packed).indexOf(mark);
+  if(i<0) return null;
+  const m=String(packed).slice(i+mark.length).match(/^[\sA-Za-z0-9+/=]+/);
+  return m ? m[0].replace(/\s/g,'') : null;
+}
+
 async function wrap(text,pass){
   const salt=crypto.getRandomValues(new Uint8Array(16));
   const iv=crypto.getRandomValues(new Uint8Array(12));
@@ -947,26 +1045,10 @@ $('#btnPack').addEventListener('click',async ()=>{
   renderSend(); renderList();
   toast('包みました。お送りください');
 });
-$('#btnUnpack').addEventListener('click',async ()=>{
-  const raw=$('#inBundle').value.trim();
-  if(!raw){ toast('貼り付けてください'); return; }
-  const key=settings.shareKey||'';
-  if(!key){ toast('設定タブで、共有の合言葉を入れてください'); return; }
-  if(raw.indexOf(MARK)<0){
-    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">包まれた中身が見あたりません。届いた文の全体を、そのまま貼り付けてみてください。</div>';
-    return;
-  }
-  let obj;
-  try{
-    obj=JSON.parse(await unwrap(raw,key));
-  }catch(e){
-    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;"><b>合言葉が合わないようです。</b><br>'+
-      '職員の端末と管理者の端末で、同じ合言葉になっているかお確かめください。</div>';
-    return;
-  }
+async function importBundle(obj,where){
   if(!obj||obj.app!=='hiyari-techo'||!Array.isArray(obj.reports)){
-    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">ヒヤリハット帖の記録ではないようです。</div>';
-    return;
+    $(where).innerHTML='<div class="warnbox" style="margin-top:11px;">ヒヤリハット帖の記録ではないようです。</div>';
+    return false;
   }
   let add=0,upd=0,dup=0;
   for(const r of obj.reports){
@@ -976,13 +1058,185 @@ $('#btnUnpack').addEventListener('click',async ()=>{
     else if((r.updatedAt||'')>(ex.updatedAt||'')){ Object.assign(ex,r); await idbPut('reports',ex); upd++; }
     else dup++;
   }
-  $('#inBundle').value='';
-  $('#unpackOut').innerHTML='<div class="okbox" style="margin-top:11px;"><b>'+
+  $(where).innerHTML='<div class="okbox" style="margin-top:11px;"><b>'+
     esc(obj.from||'')+' さんから '+obj.reports.length+'件 を受け取りました。</b><br>'+
     'あたらしく入ったもの：'+add+'件<br>上書きしたもの：'+upd+'件<br>すでにあったもの：'+dup+'件<br>'+
     '<b>この画面を、送ってくださった方にお見せください。</b></div>';
   buildOptions(); renderList(); renderSum(); renderSend(); await stat();
-  toast('取り込みました');
+  return true;
+}
+
+/* ===== QRコードで渡す ===== */
+const QR_CHUNK=950;
+let qrParts=[], qrIdx=0, qrTimer=null, qrSpeed=700, qrPaused=false;
+function drawQR(text){
+  const cv=$('#qrCanvas'), ctx=cv.getContext('2d');
+  const qr=qrcode(0,'M');
+  qr.addData(text);
+  qr.make();
+  const n=qr.getModuleCount(), pad=2;
+  const cell=Math.floor(cv.width/(n+pad*2));
+  const off=Math.floor((cv.width-cell*n)/2);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#000';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) ctx.fillRect(off+c*cell,off+r*cell,cell,cell);
+}
+function qrShow(){
+  if(!qrParts.length) return;
+  drawQR(qrParts[qrIdx]);
+  $('#qrStep').textContent=(qrIdx+1)+' / '+qrParts.length+' 枚目';
+  $('#qrBar').innerHTML=qrParts.map((_,i)=>'<i class="'+(i===qrIdx?'on':'')+'"></i>').join('');
+}
+function qrTick(){
+  if(qrPaused) return;
+  qrIdx=(qrIdx+1)%qrParts.length;
+  qrShow();
+}
+function qrStart(){
+  clearInterval(qrTimer);
+  qrTimer=setInterval(qrTick,qrSpeed);
+}
+function qrStop(){ clearInterval(qrTimer); qrTimer=null; }
+$('#btnQrSend').addEventListener('click',async ()=>{
+  const key=settings.shareKey||'';
+  if(!key){ toast('設定タブで、共有の合言葉を決めてください'); return; }
+  if(typeof qrcode==='undefined'){ toast('QRコードの部品が読み込めていません'); return; }
+  if(!window.crypto||!crypto.subtle){ toast('この画面では包めません。https:// でお開きください'); return; }
+  const un=unsentList();
+  if(!un.length){ toast('送る記録がありません'); return; }
+  let body;
+  try{
+    body=await wrap2(JSON.stringify({app:'hiyari-techo',kind:'bundle',
+      from:settings.device||'（名前なし）',at:new Date().toISOString(),reports:un}),key);
+  }catch(e){ toast('うまく包めませんでした'); return; }
+  const sid=Math.random().toString(36).slice(2,6);
+  const total=Math.ceil(body.length/QR_CHUNK);
+  qrParts=[];
+  for(let i=0;i<total;i++){
+    qrParts.push('HQR1:'+sid+':'+(i+1)+':'+total+':'+body.slice(i*QR_CHUNK,(i+1)*QR_CHUNK));
+  }
+  qrIdx=0; qrPaused=false;
+  $('#qrHint').innerHTML='記録 <b>'+un.length+'件</b> を <b>'+total+'枚</b> のQRコードにしました。<br>'+
+    (total>1?'順番に切り替わります。管理者の端末で読み取り続けてください。':'管理者の端末で読み取ってください。');
+  settings.pending=un.map(r=>r.id);
+  settings.pendingAt=todayStr()+' '+new Date().toTimeString().slice(0,5);
+  await idbPut('meta',{k:'settings',v:settings});
+  $('#dlgQrSend').showModal();
+  qrShow();
+  if(total>1) qrStart();
+  renderSend(); renderList();
+});
+$('#qrSendClose').addEventListener('click',()=>{ qrStop(); $('#dlgQrSend').close(); });
+$('#qrPause').addEventListener('click',()=>{
+  qrPaused=!qrPaused;
+  $('#qrPause').textContent=qrPaused?'すすめる':'とめる';
+});
+$('#qrFaster').addEventListener('click',()=>{
+  qrSpeed=Math.max(300,qrSpeed-200); qrStart(); toast('1枚 '+(qrSpeed/1000).toFixed(1)+'秒');
+});
+$('#qrSlower').addEventListener('click',()=>{
+  qrSpeed=Math.min(2000,qrSpeed+200); qrStart(); toast('1枚 '+(qrSpeed/1000).toFixed(1)+'秒');
+});
+
+/* ===== QRコードを読み取る ===== */
+let scanStream=null, scanRAF=null, scanGot={}, scanSid='', scanTotal=0, scanCv=null;
+function scanReset(){ scanGot={}; scanSid=''; scanTotal=0; $('#scanOut').innerHTML=''; scanPaint(); }
+function scanPaint(){
+  if(!scanTotal){ $('#scanBar').innerHTML=''; $('#scanStep').textContent='カメラを向けてください'; return; }
+  const got=Object.keys(scanGot).length;
+  $('#scanStep').textContent=got+' / '+scanTotal+' 枚 読み取れました';
+  let h='';
+  for(let i=1;i<=scanTotal;i++) h+='<i class="'+(scanGot[i]?'on':'')+'"></i>';
+  $('#scanBar').innerHTML=h;
+}
+async function scanHandle(text){
+  if(!text||text.indexOf('HQR1:')!==0) return;
+  const p=text.split(':');
+  if(p.length<6) return;
+  const sid=p[1], i=Number(p[2]), n=Number(p[3]);
+  const payload=text.slice(('HQR1:'+sid+':'+p[2]+':'+p[3]+':').length);
+  if(!sid||!i||!n) return;
+  if(scanSid&&scanSid!==sid){ scanReset(); }
+  scanSid=sid; scanTotal=n;
+  if(!scanGot[i]){ scanGot[i]=payload; scanPaint(); }
+  if(Object.keys(scanGot).length<n) return;
+  // そろった
+  scanStop();
+  let body='';
+  for(let k=1;k<=n;k++) body+=scanGot[k];
+  const key=settings.shareKey||'';
+  let obj;
+  try{ obj=JSON.parse(await unwrap2(body,key)); }
+  catch(e){
+    $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;"><b>合言葉が合わないようです。</b><br>'+
+      '職員の端末と管理者の端末で、同じ合言葉になっているかお確かめください。</div>';
+    return;
+  }
+  const ok=await importBundle(obj,'#scanOut');
+  if(ok){ toast('取り込みました'); $('#unpackOut').innerHTML=$('#scanOut').innerHTML; }
+}
+function scanLoop(){
+  const v=$('#scanVideo');
+  if(v.readyState===v.HAVE_ENOUGH_DATA&&scanCv){
+    const w=480, h=Math.round(v.videoHeight/v.videoWidth*480)||480;
+    scanCv.width=w; scanCv.height=h;
+    const ctx=scanCv.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(v,0,0,w,h);
+    try{
+      const img=ctx.getImageData(0,0,w,h);
+      const code=jsQR(img.data,w,h,{inversionAttempts:'dontInvert'});
+      if(code&&code.data) scanHandle(code.data);
+    }catch(e){}
+  }
+  scanRAF=requestAnimationFrame(scanLoop);
+}
+function scanStop(){
+  if(scanRAF){ cancelAnimationFrame(scanRAF); scanRAF=null; }
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+}
+$('#btnQrScan').addEventListener('click',async ()=>{
+  if(!settings.shareKey){ toast('設定タブで、共有の合言葉を入れてください'); return; }
+  if(typeof jsQR==='undefined'){ toast('読み取りの部品が読み込めていません'); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    toast('この端末ではカメラが使えません。貼り付けでお試しください'); return;
+  }
+  scanReset();
+  $('#dlgQrScan').showModal();
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  }catch(e){
+    $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;">カメラを使えませんでした。<br>'+
+      'ブラウザの設定でカメラの使用を許可していただくか、貼り付けでの取り込みをお使いください。</div>';
+    return;
+  }
+  const v=$('#scanVideo');
+  v.srcObject=scanStream; v.setAttribute('playsinline','');
+  try{ await v.play(); }catch(e){}
+  if(!scanCv) scanCv=document.createElement('canvas');
+  scanLoop();
+});
+$('#qrScanClose').addEventListener('click',()=>{ scanStop(); $('#dlgQrScan').close(); });
+
+$('#btnUnpack').addEventListener('click',async ()=>{
+  const raw=$('#inBundle').value.trim();
+  if(!raw){ toast('貼り付けてください'); return; }
+  const key=settings.shareKey||'';
+  if(!key){ toast('設定タブで、共有の合言葉を入れてください'); return; }
+  const b2=bodyOf(raw,MARK2), b1=bodyOf(raw,MARK);
+  if(!b2&&!b1){
+    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;">包まれた中身が見あたりません。届いた文の全体を、そのまま貼り付けてみてください。</div>';
+    return;
+  }
+  let obj;
+  try{
+    obj=JSON.parse(b2 ? await unwrap2(b2,key) : await unwrap(raw,key));
+  }catch(e){
+    $('#unpackOut').innerHTML='<div class="warnbox" style="margin-top:11px;"><b>合言葉が合わないようです。</b><br>'+
+      '職員の端末と管理者の端末で、同じ合言葉になっているかお確かめください。</div>';
+    return;
+  }
+  $('#inBundle').value='';
+  if(await importBundle(obj,'#unpackOut')) toast('取り込みました');
 });
 
 /* ===== バックアップ・設定 ===== */
