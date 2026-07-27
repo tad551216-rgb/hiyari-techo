@@ -269,16 +269,21 @@ input.masked.show{-webkit-text-security:none;}
       <div id="confirmPanel"></div>
     </div>
 
-    <h2 class="sec">管理者：受け取る</h2>
+    <h2 class="sec">管理者：受け取る ①　目の前で（QRコード）</h2>
     <div class="card">
       <button class="btn v wide big" id="btnQrScan" style="padding:15px;font-size:15px;margin-bottom:12px;">📷 カメラでQRコードを読み取る</button>
-      <p class="note" style="margin-bottom:12px;">職員の端末に出ているQRコードに、カメラを向けてください。何枚かに分かれている場合も、そのまま持っていれば全部そろいます。</p>
-      <p class="note" style="margin-bottom:10px;">LINEなどで届いた文から取り込むときは、下の枠に貼り付けてください。<b>どちらの方法でも、いまある記録に足しこみます</b>（消えることはありません）。</p>
+      <p class="note">職員の端末に出ているQRコードに、カメラを向けてください。何枚かに分かれている場合も、そのまま持っていれば全部そろいます。</p>
+    </div>
+
+    <h2 class="sec">管理者：受け取る ②　離れた場所から（LINEなど）</h2>
+    <div class="card">
+      <p class="note" style="margin-bottom:10px;">LINEやメールで届いた文を、<b>そのまま下の枠に貼り付けてください。</b>貼り付けた時点で、自動で読み取ります。</p>
       <div class="fld" style="margin-bottom:10px;">
         <textarea id="inBundle" placeholder="ここに貼り付けてください" style="min-height:110px;font-family:ui-monospace,monospace;font-size:12.5px;"></textarea>
       </div>
       <button class="btn g wide" id="btnUnpack">📥 貼り付けた文から取り込む</button>
       <div id="unpackOut"></div>
+      <p class="note" style="margin-top:9px;"><b>どちらの方法でも、いまある記録に足しこみます</b>（消えることはありません）。同じ記録を二度取り込んでも増えません。</p>
     </div>
 
     <h2 class="sec">報告書の印刷</h2>
@@ -1232,7 +1237,7 @@ $('#btnQrScan').addEventListener('click',async ()=>{
 });
 $('#qrScanClose').addEventListener('click',()=>{ scanStop(); $('#dlgQrScan').close(); });
 
-$('#btnUnpack').addEventListener('click',async ()=>{
+async function doUnpack(){
   const raw=$('#inBundle').value.trim();
   if(!raw){ toast('貼り付けてください'); return; }
   const key=settings.shareKey||'';
@@ -1252,7 +1257,9 @@ $('#btnUnpack').addEventListener('click',async ()=>{
   }
   $('#inBundle').value='';
   if(await importBundle(obj,'#unpackOut')) toast('取り込みました');
-});
+}
+$('#btnUnpack').addEventListener('click',doUnpack);
+$('#inBundle').addEventListener('paste',()=>setTimeout(doUnpack,150));
 
 /* ===== バックアップ・設定 ===== */
 $('#btnBackup').addEventListener('click',async ()=>{
