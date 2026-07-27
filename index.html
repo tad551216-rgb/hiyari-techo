@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ヒヤリハット帖 | つくる手帖</title>
+<meta name="description" content="介護現場のヒヤリハットと事故の報告アプリ。選ぶだけで報告書ができ、何時に・どこで・何が多いかを集計して見える化します。データは端末の中だけに保存されます。">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ヒヤリハット帖">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --ink:#1B2A4A; --ink2:#3A4A66; --paper:#F3F1EA; --paper2:#ECE9DF;
+  --line:#D8D3C4; --line2:#B9B2A0; --verm:#C2603A; --verm2:#9F4A2B;
+  --green:#3D6B52; --green2:#EFF5F1; --muted:#7A7567; --white:#fff;
+  --warn:#FBF0EC; --blue:#35706B; --gold:#8A6A20; --gold2:#FDF6E7;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  background:var(--paper);color:var(--ink);line-height:1.7;font-size:15px;
+  background-image:linear-gradient(#E3DFD3 1px,transparent 1px),linear-gradient(90deg,#E3DFD3 1px,transparent 1px);
+  background-size:26px 26px;padding-bottom:80px;
+}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink);}
+button{cursor:pointer;}
+:focus-visible{outline:2px solid var(--verm);outline-offset:2px;}
+
+header{background:var(--ink);color:#fff;padding:14px 16px;
+  padding-top:calc(14px + env(safe-area-inset-top));position:sticky;top:0;z-index:30;}
+header h1{font-size:20px;font-weight:700;letter-spacing:.04em;font-family:"Hiragino Mincho ProN",serif;}
+header .sub{font-size:11px;letter-spacing:.16em;color:#B9C4D6;margin-top:2px;}
+header .sub b{color:#fff;font-weight:400;letter-spacing:.02em;}
+
+nav.tabs{display:flex;background:var(--paper2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:29;}
+nav.tabs button{flex:1;background:none;border:none;padding:11px 4px 9px;font-size:13.5px;font-weight:700;
+  color:var(--ink2);border-bottom:3px solid transparent;}
+nav.tabs button.on{color:var(--verm);border-bottom-color:var(--verm);background:var(--paper);}
+
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 0;}
+.page{display:none;} .page.on{display:block;}
+h2.sec{font-size:15px;font-weight:700;margin:20px 0 8px;padding-left:9px;border-left:4px solid var(--verm);line-height:1.4;}
+h2.sec:first-child{margin-top:4px;}
+.card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
+.note{font-size:12.5px;color:var(--muted);line-height:1.8;}
+.note b{color:var(--ink2);}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1.5px solid var(--line2);background:var(--white);color:var(--ink);
+  border-radius:9px;padding:11px 16px;font-size:14px;font-weight:700;}
+.btn.wide{width:100%;margin-bottom:8px;}
+.btn.p{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn.g{background:var(--green);color:#fff;border-color:var(--green);}
+.btn.v{background:var(--verm);color:#fff;border-color:var(--verm);}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:8px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.row>.btn{flex:1;min-width:130px;}
+
+/* 一覧 */
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px;}
+.filters button{border:1.5px solid var(--line2);background:var(--white);border-radius:999px;
+  padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--ink2);}
+.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.rlist{display:grid;gap:9px;}
+.rcard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px 13px;
+  text-align:left;width:100%;border-left-width:5px;border-left-style:solid;}
+.rcard.jiko{border-left-color:var(--verm);}
+.rcard.hiyari{border-left-color:var(--gold);}
+.rhead{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.rhead .kind{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;border:1px solid;}
+.rhead .kind.jiko{background:var(--warn);color:var(--verm2);border-color:#E9CFC4;}
+.rhead .kind.hiyari{background:var(--gold2);color:var(--gold);border-color:#E8DBBB;}
+.rhead .dt{font-size:12.5px;color:var(--muted);font-weight:700;}
+.rhead .type{font-size:15.5px;font-weight:700;flex:1;min-width:0;}
+.rbody{font-size:13px;color:var(--ink2);line-height:1.75;}
+.rfoot{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.tag{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;
+  background:var(--paper);border:1px solid var(--line);color:var(--muted);}
+.tag.g{background:var(--green2);color:var(--green);border-color:#CBDDD1;}
+.tag.v{background:var(--warn);color:var(--verm2);border-color:#E9CFC4;}
+.empty{text-align:center;color:var(--muted);font-size:13.5px;padding:26px 10px;line-height:1.9;}
+
+/* 集計 */
+.summary{display:flex;gap:8px;margin-bottom:14px;}
+.summary div{flex:1;background:var(--white);border:1px solid var(--line);border-radius:11px;padding:10px 8px;text-align:center;}
+.summary b{display:block;font-size:24px;line-height:1.2;}
+.summary span{font-size:11px;color:var(--muted);}
+.summary .j b{color:var(--verm2);} .summary .h b{color:var(--gold);}
+.rank{display:grid;gap:7px;}
+.rank .r{display:grid;grid-template-columns:6.5em 1fr auto;gap:8px;align-items:center;font-size:13px;}
+.rank .r .lb{font-weight:700;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rank .r .bar{background:var(--paper2);border-radius:5px;height:19px;overflow:hidden;}
+.rank .r .bar i{display:block;height:100%;background:var(--ink);border-radius:5px;}
+.rank .r .bar i.v{background:var(--verm);}
+.rank .r .n{font-size:12.5px;color:var(--muted);font-weight:700;min-width:2.4em;text-align:right;}
+.hours{display:flex;align-items:flex-end;gap:3px;height:110px;margin:6px 0 2px;}
+.hours .h{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;}
+.hours .h i{display:block;width:100%;background:var(--ink);border-radius:3px 3px 0 0;min-height:2px;}
+.hours .h i.peak{background:var(--verm);}
+.hours .h b{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:2px;}
+.hlabels{display:flex;gap:3px;}
+.hlabels span{flex:1;text-align:center;font-size:9.5px;color:var(--muted);}
+.insight{background:var(--gold2);border:1px solid #E8DBBB;border-radius:10px;padding:11px 13px;
+  font-size:13.5px;color:var(--gold);line-height:1.85;margin-top:12px;}
+.insight b{color:var(--verm2);}
+
+dialog{border:none;padding:0;background:none;max-width:100%;}
+dialog::backdrop{background:rgba(27,42,74,.6);}
+.sheet{background:var(--paper);width:min(700px,94vw);max-height:88vh;overflow:auto;border-radius:16px;padding:0 0 16px;}
+.sheet-head{position:sticky;top:0;background:var(--ink);color:#fff;padding:13px 16px;
+  display:flex;align-items:center;gap:10px;border-radius:16px 16px 0 0;z-index:2;}
+.sheet-head b{flex:1;font-size:17px;}
+.sheet-head button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.5);
+  color:#fff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;}
+.sheet-body{padding:14px;}
+
+.fld{margin-bottom:12px;}
+.fld>label{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin-bottom:4px;}
+.fld input[type=text],.fld input[type=date],.fld input[type=time],.fld select,.fld textarea{
+  width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--white);}
+.fld textarea{min-height:76px;resize:vertical;line-height:1.7;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chips button{border:1.5px solid var(--line2);background:var(--white);border-radius:999px;
+  padding:8px 14px;font-size:13px;font-weight:700;color:var(--ink2);}
+.chips button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.chips.v button.on{background:var(--verm);border-color:var(--verm);}
+.chips.g button.on{background:var(--green);border-color:var(--green);}
+.chips.multi button.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+.culture{background:var(--green2);border:1px solid #CBDDD1;border-radius:11px;padding:12px 14px;
+  font-size:13.5px;color:var(--green);line-height:1.9;margin-bottom:16px;}
+.culture b{display:block;font-size:14.5px;margin-bottom:3px;}
+.warnbox{background:var(--warn);border:1px solid #E9CFC4;border-radius:10px;padding:11px 13px;
+  font-size:12.5px;color:var(--verm2);line-height:1.85;}
+.okbox{background:var(--green2);border:1px solid #CBDDD1;border-radius:10px;padding:11px 13px;
+  font-size:12.5px;color:var(--green);line-height:1.85;}
+
+.outbox{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:11px;
+  font-size:12.5px;white-space:pre-wrap;word-break:break-all;max-height:190px;overflow:auto;
+  line-height:1.75;font-family:ui-monospace,monospace;}
+table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top;}
+table.tbl th{background:var(--paper2);font-weight:700;white-space:nowrap;}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:700;
+  opacity:0;pointer-events:none;transition:.22s;z-index:100;max-width:88vw;text-align:center;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ヒヤリハット帖</h1>
+  <div class="sub">TSUKURU TECHO ｜ <b>ヒヤリハットと事故の記録</b></div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="on" data-tab="list" role="tab">きろく</button>
+  <button data-tab="sum" role="tab">集計</button>
+  <button data-tab="out" role="tab">出力</button>
+</nav>
+
+<div class="wrap">
+
+  <!-- きろく -->
+  <section class="page on" id="p-list">
+    <button class="btn v wide" id="btnNew" style="padding:14px;font-size:15px;">＋ あたらしく記録する</button>
+    <div class="filters" id="filters">
+      <button data-f="all" class="on">すべて</button>
+      <button data-f="hiyari">ヒヤリハット</button>
+      <button data-f="jiko">事故</button>
+      <button data-f="todo">対応がまだ</button>
+    </div>
+    <div class="fld" style="margin-bottom:11px;">
+      <input type="month" id="listMonth">
+    </div>
+    <div class="rlist" id="rList"></div>
+  </section>
+
+  <!-- 集計 -->
+  <section class="page" id="p-sum">
+    <div class="fld"><label for="sumRange">集計する期間</label>
+      <select id="sumRange">
+        <option value="1">この1か月</option>
+        <option value="3" selected>この3か月</option>
+        <option value="6">この6か月</option>
+        <option value="12">この1年</option>
+        <option value="0">すべて</option>
+      </select>
+    </div>
+    <div class="summary" id="sumCount"></div>
+
+    <h2 class="sec">何時ごろに多いか</h2>
+    <div class="card">
+      <div class="hours" id="hourChart"></div>
+      <div class="hlabels" id="hourLabels"></div>
+      <p class="note" style="margin-top:8px;">2時間ごとの件数です。人手が薄くなる時間と重なっていないか、確かめてみてください。</p>
+    </div>
+
+    <h2 class="sec">どこで多いか</h2>
+    <div class="card"><div class="rank" id="rankPlace"></div></div>
+
+    <h2 class="sec">何が多いか</h2>
+    <div class="card"><div class="rank" id="rankType"></div></div>
+
+    <h2 class="sec">曜日</h2>
+    <div class="card"><div class="rank" id="rankWday"></div></div>
+
+    <div id="insight"></div>
+  </section>
+
+  <!-- 出力 -->
+  <section class="page" id="p-out">
+    <h2 class="sec">報告書の印刷</h2>
+    <div class="card">
+      <div class="fld"><label for="outMonth">対象の月</label><input type="month" id="outMonth"></div>
+      <button class="btn wide" id="btnPrintMonth">🖨 その月の報告書をまとめて印刷</button>
+      <button class="btn wide" id="btnCsv">📄 記録をCSVで保存する</button>
+    </div>
+
+    <h2 class="sec">会議用のまとめ</h2>
+    <div class="card">
+      <p class="note" style="margin-bottom:9px;">集計タブの期間で、会議に貼れる文章をつくります。</p>
+      <div class="outbox" id="meetText">—</div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn sm" id="btnMeetCopy">📋 コピー</button>
+        <button class="btn sm" id="btnMeetShare">📤 共有（LINEなど）</button>
+      </div>
+    </div>
+
+    <h2 class="sec">バックアップ</h2>
+    <div class="card">
+      <p class="note" style="margin-bottom:9px;">事故の記録は<b>5年間</b>の保存を求められる場合があります。保存の年数は自治体によって異なりますので、必ずご確認ください。月に一度はファイルに保存し、別の場所にも控えを置いてください。</p>
+      <button class="btn wide" id="btnBackup">💾 すべてJSONで保存する</button>
+      <button class="btn wide" id="btnRestore">📥 JSONから復元する</button>
+      <input type="file" id="fileRestore" accept=".json,application/json" style="display:none;">
+      <p class="note" id="dataStat"></p>
+    </div>
+
+    <h2 class="sec">設定</h2>
+    <div class="card">
+      <div class="fld"><label for="setFac">事業所の名前</label><input type="text" id="setFac"></div>
+      <div class="fld"><label for="setPlaces">場所の選択肢（1行に1つ）</label><textarea id="setPlaces" style="min-height:130px;"></textarea></div>
+      <div class="fld"><label for="setTypes">できごとの種類（1行に1つ）</label><textarea id="setTypes" style="min-height:130px;"></textarea></div>
+      <button class="btn g" id="btnSaveSet">保存する</button>
+    </div>
+
+    <div class="card">
+      <div class="okbox" style="margin-bottom:11px;">
+        入力した内容は<b>すべてこの端末の中だけ</b>に保存されます。端末を初期化すると消えますので、必ずバックアップをお取りください。
+      </div>
+      <button class="btn wide" id="btnSample">🧪 サンプルデータを入れて試す</button>
+      <button class="btn wide" id="btnClear">🗑 すべてのデータを消す</button>
+      <p class="note">つくる手帖 ／ ヒヤリハット帖</p>
+    </div>
+  </section>
+</div>
+
+<!-- 記録シート -->
+<dialog id="dlgRep">
+  <div class="sheet">
+    <div class="sheet-head"><b id="repTitle">記録</b><button id="repClose">閉じる</button></div>
+    <div class="sheet-body">
+
+      <div class="culture">
+        <b>これは、人を責めるための記録ではありません。</b>
+        同じことが起きないように、仕組みのほうを直すための記録です。気づいたことを、そのまま書いてください。
+      </div>
+
+      <h2 class="sec">いつ・どこで</h2>
+      <div class="two">
+        <div class="fld"><label for="rDate">日付</label><input type="date" id="rDate"></div>
+        <div class="fld"><label for="rTime">おおよその時刻</label><input type="time" id="rTime"></div>
+      </div>
+      <div class="fld">
+        <label>どちらですか</label>
+        <div class="chips v" id="chKind">
+          <button data-v="ヒヤリハット">ヒヤリハット（起きる前に気づいた）</button>
+          <button data-v="事故">事故（実際に起きた）</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>場所</label>
+        <div class="chips" id="chPlace"></div>
+      </div>
+      <div class="fld"><label for="rPlaceOther">上にないときは、ここに</label><input type="text" id="rPlaceOther" placeholder="例：送迎車の中"></div>
+
+      <h2 class="sec">なにが起きたか</h2>
+      <div class="fld">
+        <label>できごとの種類</label>
+        <div class="chips" id="chType"></div>
+      </div>
+      <div class="fld"><label for="rPerson">利用者のお名前</label>
+        <input type="text" id="rPerson" list="personList" placeholder="例：松本 静江">
+        <datalist id="personList"></datalist></div>
+      <div class="fld"><label for="rSituation">そのときのようす（見たままを書いてください）</label>
+        <textarea id="rSituation" placeholder="例：トイレから戻られる際、廊下のマットの端につまずかれ、手すりをつかんで持ちこたえられた。転倒はなし。"></textarea></div>
+
+      <h2 class="sec">そのあとの対応</h2>
+      <div class="fld">
+        <label>おけがの程度</label>
+        <div class="chips v" id="chInjury">
+          <button data-v="なし">なし</button>
+          <button data-v="かすり傷・打撲">かすり傷・打撲</button>
+          <button data-v="受診した">受診した</button>
+          <button data-v="入院した">入院した</button>
+        </div>
+      </div>
+      <div class="fld"><label for="rAction">その場でした対応</label>
+        <textarea id="rAction" placeholder="例：その場で座っていただき、看護師が全身を確認。痛みの訴えなし。マットは即時に撤去。"></textarea></div>
+      <div class="two">
+        <div class="fld"><label for="rFamily">ご家族へのご連絡</label>
+          <select id="rFamily"><option value="">—</option><option>連絡した</option><option>不要と判断</option><option>これから連絡する</option></select></div>
+        <div class="fld"><label for="rFamilyTime">連絡した時刻</label><input type="time" id="rFamilyTime"></div>
+      </div>
+      <div class="fld">
+        <label>自治体への報告</label>
+        <div class="chips" id="chGov">
+          <button data-v="不要">不要</button>
+          <button data-v="要">必要</button>
+          <button data-v="済">報告した</button>
+        </div>
+        <p class="note" style="margin-top:6px;">報告が必要になる範囲は自治体ごとに違います。判断に迷うときは、管理者と保険者にご確認ください。</p>
+      </div>
+
+      <h2 class="sec">どうして起きたか</h2>
+      <div class="fld">
+        <label>あてはまるもの（いくつでも）</label>
+        <div class="chips multi" id="chFactor">
+          <button data-v="環境">環境（段差・物・明るさ）</button>
+          <button data-v="人手">人手・時間帯</button>
+          <button data-v="手順">手順・決めごと</button>
+          <button data-v="からだ">ご本人のからだ</button>
+          <button data-v="情報共有">情報の共有</button>
+          <button data-v="用具">用具・福祉用具</button>
+        </div>
+      </div>
+      <div class="fld"><label for="rFactorNote">くわしく</label>
+        <textarea id="rFactorNote" placeholder="例：マットの端がめくれていたが、誰も気づいていなかった。朝の申し送りにも出ていない。"></textarea></div>
+
+      <h2 class="sec">同じことを起こさないために</h2>
+      <div class="fld"><label for="rPrevention">これからすること</label>
+        <textarea id="rPrevention" placeholder="例：廊下のマットは撤去する。毎朝の開所前点検の項目に「床の敷物」を加える。"></textarea></div>
+      <div class="two">
+        <div class="fld"><label for="rReporter">書いた人</label><input type="text" id="rReporter"></div>
+        <div class="fld"><label for="rChecker">確認した管理者</label><input type="text" id="rChecker"></div>
+      </div>
+      <div class="fld">
+        <label>いまの状態</label>
+        <div class="chips g" id="chStatus">
+          <button data-v="下書き">下書き</button>
+          <button data-v="報告した">報告した</button>
+          <button data-v="対応おわり">対応おわり</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn g" id="btnRepSave" style="flex:2;">保存する</button>
+        <button class="btn" id="btnRepPrint">🖨 印刷</button>
+      </div>
+      <button class="btn sm wide" id="btnRepDel" style="margin-top:10px;color:var(--verm2);border-color:#E9CFC4;">この記録を消す</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+const DB_NAME='hiyari-db', DB_VER=1;
+let db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const rq=indexedDB.open(DB_NAME,DB_VER);
+    rq.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('reports')){
+        const st=d.createObjectStore('reports',{keyPath:'id'});
+        st.createIndex('date','date',{unique:false});
+      }
+      if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'k'});
+    };
+    rq.onsuccess=e=>{db=e.target.result;res();};
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+function tx(s,m){ return db.transaction(s,m).objectStore(s); }
+function idbPut(s,v){ return new Promise((res,rej)=>{const r=tx(s,'readwrite').put(v);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);}); }
+function idbDel(s,k){ return new Promise((res,rej)=>{const r=tx(s,'readwrite').delete(k);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);}); }
+function idbAll(s){ return new Promise((res,rej)=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);}); }
+function idbGet(s,k){ return new Promise((res,rej)=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}); }
+function idbClear(s){ return new Promise((res,rej)=>{const r=tx(s,'readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);}); }
+
+const DEF_PLACES=['居室・フロア','廊下','トイレ','浴室・脱衣室','食堂','玄関','送迎車','屋外','機能訓練室','階段'];
+const DEF_TYPES=['転倒・転落','ずり落ち','誤薬・薬の飲み忘れ','誤嚥・むせこみ','皮膚のはがれ・打撲',
+  '衝突・ぶつかり','行方が分からなくなる','送迎中のできごと','食事の間違い','異食','その他'];
+let reports=[], settings={facility:'',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()};
+let curRep=null, listFilter='all';
+let seq=Date.now()%100000;
+
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function wday(ds){const p=ds.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]).getDay();}
+const WD=['日','月','火','水','木','金','土'];
+function jpDate(ds){ if(!ds) return ''; const p=ds.split('-').map(Number);return p[0]+'年'+p[1]+'月'+p[2]+'日';}
+function jpShort(ds){ if(!ds) return ''; const p=ds.split('-').map(Number);return p[1]+'/'+p[2]+'（'+WD[wday(ds)]+'）';}
+function addMonths(ds,n){
+  if(!ds) return '';
+  const p=ds.split('-').map(Number);
+  let y=p[0], m=p[1]-1+n, d=p[2];
+  y+=Math.floor(m/12); m=((m%12)+12)%12;
+  const last=new Date(y,m+1,0).getDate();
+  if(d>last) d=last;
+  return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+
+/* ===== 集計のロジック ===== */
+function inRange(list,months){
+  if(!months) return list.slice();
+  const from=addMonths(todayStr(),-months);
+  return list.filter(r=>r.date>=from);
+}
+function tally(list,keyFn){
+  const m={};
+  list.forEach(r=>{ const k=keyFn(r); if(!k) return; m[k]=(m[k]||0)+1; });
+  return Object.keys(m).map(k=>({k:k,n:m[k]})).sort((a,b)=>b.n-a.n||a.k.localeCompare(b.k));
+}
+function hourBins(list){
+  const bins=new Array(12).fill(0);
+  list.forEach(r=>{
+    if(!r.time||!/^\d{1,2}:\d{2}$/.test(r.time)) return;
+    const h=Number(r.time.split(':')[0]);
+    if(h>=0&&h<24) bins[Math.floor(h/2)]++;
+  });
+  return bins;
+}
+function peakHint(list){
+  if(list.length<3) return '';
+  const bins=hourBins(list), max=Math.max.apply(null,bins);
+  const places=tally(list,r=>r.place), types=tally(list,r=>r.type);
+  const out=[];
+  if(max>0){
+    const i=bins.indexOf(max);
+    if(max>=2) out.push('<b>'+(i*2)+'時〜'+(i*2+2)+'時</b>に'+max+'件と、もっとも多くなっています。');
+  }
+  if(places.length&&places[0].n>=2) out.push('場所では<b>'+esc(places[0].k)+'</b>が'+places[0].n+'件で最も多いです。');
+  if(types.length&&types[0].n>=2) out.push('できごとは<b>'+esc(types[0].k)+'</b>が'+types[0].n+'件です。');
+  if(!out.length) return '';
+  return '<div class="insight">'+out.join('<br>')+'<br>この時間と場所に、人手や見守りが足りているかを話し合ってみてください。</div>';
+}
+
+function bars(el,rows,accent){
+  if(!rows.length){ el.innerHTML='<p class="empty" style="padding:14px;">この期間の記録はありません。</p>'; return; }
+  const max=rows[0].n;
+  el.innerHTML=rows.map((r,i)=>'<div class="r"><span class="lb">'+esc(r.k)+'</span>'+
+    '<span class="bar"><i class="'+(accent&&i===0?'v':'')+'" style="width:'+Math.max(4,r.n/max*100)+'%"></i></span>'+
+    '<span class="n">'+r.n+'</span></div>').join('');
+}
+function renderSum(){
+  const months=Number($('#sumRange').value);
+  const list=inRange(reports,months);
+  const j=list.filter(r=>r.kind==='事故').length;
+  const h=list.filter(r=>r.kind!=='事故').length;
+  $('#sumCount').innerHTML='<div class="h"><b>'+h+'</b><span>ヒヤリハット</span></div>'+
+    '<div class="j"><b>'+j+'</b><span>事故</span></div>'+
+    '<div><b>'+list.length+'</b><span>合計</span></div>';
+  const bins=hourBins(list), max=Math.max.apply(null,bins.concat([1]));
+  $('#hourChart').innerHTML=bins.map(n=>'<span class="h">'+(n?'<b>'+n+'</b>':'')+
+    '<i class="'+(n===max&&n>0?'peak':'')+'" style="height:'+(n/max*84)+'%"></i></span>').join('');
+  $('#hourLabels').innerHTML=bins.map((_,i)=>'<span>'+(i*2)+'</span>').join('');
+  bars($('#rankPlace'),tally(list,r=>r.place||r.placeOther),true);
+  bars($('#rankType'),tally(list,r=>r.type),true);
+  bars($('#rankWday'),tally(list,r=>r.date?WD[wday(r.date)]+'曜':'' ),false);
+  $('#insight').innerHTML=peakHint(list);
+  renderMeet(list,months);
+}
+$('#sumRange').addEventListener('change',renderSum);
+
+function renderMeet(list,months){
+  if(!list.length){ $('#meetText').textContent='この期間の記録はありません。'; return; }
+  const label=months?('直近'+months+'か月'):'これまでのすべて';
+  const j=list.filter(r=>r.kind==='事故').length, h=list.length-j;
+  const places=tally(list,r=>r.place||r.placeOther).slice(0,3);
+  const types=tally(list,r=>r.type).slice(0,3);
+  const bins=hourBins(list), max=Math.max.apply(null,bins);
+  const L=['■ '+(settings.facility||'')+'　ヒヤリハット・事故のまとめ（'+label+'）','',
+    '件数：ヒヤリハット '+h+'件／事故 '+j+'件（合計 '+list.length+'件）'];
+  if(max>0) L.push('多い時間帯：'+(bins.indexOf(max)*2)+'時〜'+(bins.indexOf(max)+1)*2+'時（'+max+'件）');
+  if(places.length) L.push('多い場所：'+places.map(p=>p.k+' '+p.n+'件').join('／'));
+  if(types.length) L.push('多いできごと：'+types.map(p=>p.k+' '+p.n+'件').join('／'));
+  const todo=list.filter(r=>r.status!=='対応おわり').length;
+  L.push('対応がまだのもの：'+todo+'件');
+  L.push('');
+  L.push('【話し合いたいこと】');
+  const pv=list.filter(r=>r.prevention).slice(0,5);
+  pv.forEach(r=>L.push('・'+jpShort(r.date)+' '+(r.type||'')+'／'+r.prevention));
+  $('#meetText').textContent=L.join('\n');
+}
+
+/* ===== 一覧 ===== */
+function renderList(){
+  const ym=$('#listMonth').value;
+  let list=reports.slice().sort((a,b)=>(b.date+' '+(b.time||'')).localeCompare(a.date+' '+(a.time||'')));
+  if(ym) list=list.filter(r=>r.date.slice(0,7)===ym);
+  if(listFilter==='hiyari') list=list.filter(r=>r.kind!=='事故');
+  if(listFilter==='jiko') list=list.filter(r=>r.kind==='事故');
+  if(listFilter==='todo') list=list.filter(r=>r.status!=='対応おわり');
+  if(!list.length){
+    $('#rList').innerHTML='<p class="empty">'+(reports.length?'この条件にあう記録はありません。':'まだ記録がありません。<br>上のボタンから記録するか、<br>「出力」タブでサンプルをお試しください。')+'</p>';
+    return;
+  }
+  $('#rList').innerHTML=list.map(r=>{
+    const isJ=r.kind==='事故';
+    return '<button class="rcard '+(isJ?'jiko':'hiyari')+'" data-id="'+r.id+'">'+
+      '<div class="rhead"><span class="kind '+(isJ?'jiko':'hiyari')+'">'+(isJ?'事故':'ヒヤリ')+'</span>'+
+      '<span class="dt">'+jpShort(r.date)+(r.time?' '+r.time:'')+'</span>'+
+      '<span class="type">'+esc(r.type||'—')+'</span></div>'+
+      '<div class="rbody">'+esc((r.place||r.placeOther||'')+(r.person?'／'+r.person+' 様':''))+
+      (r.situation?'<br>'+esc(r.situation.slice(0,60))+(r.situation.length>60?'…':''):'')+'</div>'+
+      '<div class="rfoot">'+
+      (r.injury&&r.injury!=='なし'?'<span class="tag v">'+esc(r.injury)+'</span>':'')+
+      (r.gov==='要'?'<span class="tag v">自治体報告 要</span>':'')+
+      (r.gov==='済'?'<span class="tag g">自治体報告 済</span>':'')+
+      '<span class="tag'+(r.status==='対応おわり'?' g':'')+'">'+esc(r.status||'下書き')+'</span>'+
+      '</div></button>';
+  }).join('');
+  $('#rList').querySelectorAll('.rcard').forEach(b=>b.addEventListener('click',()=>openRep(b.dataset.id)));
+}
+$$('#filters button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#filters button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); listFilter=b.dataset.f; renderList();
+}));
+$('#listMonth').addEventListener('change',renderList);
+
+/* ===== 記録シート ===== */
+function setChips(sel,val){ $$(sel+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===val)); }
+function getChips(sel){ const b=document.querySelector(sel+' button.on'); return b?b.dataset.v:''; }
+function initChips(sel){
+  $$(sel+' button').forEach(b=>b.addEventListener('click',()=>{
+    const was=b.classList.contains('on');
+    $$(sel+' button').forEach(x=>x.classList.remove('on'));
+    if(!was) b.classList.add('on');
+  }));
+}
+function setMulti(sel,arr){ $$(sel+' button').forEach(b=>b.classList.toggle('on',(arr||[]).includes(b.dataset.v))); }
+function getMulti(sel){ return $$(sel+' button.on').map(b=>b.dataset.v); }
+function buildOptions(){
+  $('#chPlace').innerHTML=(settings.places||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
+  $('#chType').innerHTML=(settings.types||[]).map(p=>'<button data-v="'+esc(p)+'">'+esc(p)+'</button>').join('');
+  initChips('#chPlace'); initChips('#chType');
+  const names=Array.from(new Set(reports.map(r=>r.person).filter(Boolean)));
+  $('#personList').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
+}
+initChips('#chKind'); initChips('#chInjury'); initChips('#chGov'); initChips('#chStatus');
+$$('#chFactor button').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
+
+function openRep(id){
+  curRep = id ? reports.find(r=>r.id===id) : null;
+  const r=curRep||{};
+  $('#repTitle').textContent = curRep ? '記録をなおす' : 'あたらしく記録する';
+  $('#rDate').value=r.date||todayStr();
+  $('#rTime').value=r.time||nowHM();
+  setChips('#chKind',r.kind||'ヒヤリハット');
+  setChips('#chPlace',r.place||'');
+  $('#rPlaceOther').value=r.placeOther||'';
+  setChips('#chType',r.type||'');
+  $('#rPerson').value=r.person||'';
+  $('#rSituation').value=r.situation||'';
+  setChips('#chInjury',r.injury||'なし');
+  $('#rAction').value=r.action||'';
+  $('#rFamily').value=r.family||''; $('#rFamilyTime').value=r.familyTime||'';
+  setChips('#chGov',r.gov||'不要');
+  setMulti('#chFactor',r.factors);
+  $('#rFactorNote').value=r.factorNote||'';
+  $('#rPrevention').value=r.prevention||'';
+  $('#rReporter').value=r.reporter||''; $('#rChecker').value=r.checker||'';
+  setChips('#chStatus',r.status||'下書き');
+  $('#btnRepDel').style.display=curRep?'':'none';
+  $('#dlgRep').showModal();
+}
+$('#btnNew').addEventListener('click',()=>openRep(null));
+$('#repClose').addEventListener('click',()=>$('#dlgRep').close());
+function collectRep(){
+  return {date:$('#rDate').value||todayStr(),time:$('#rTime').value,
+    kind:getChips('#chKind')||'ヒヤリハット',place:getChips('#chPlace'),
+    placeOther:$('#rPlaceOther').value.trim(),type:getChips('#chType'),
+    person:$('#rPerson').value.trim(),situation:$('#rSituation').value.trim(),
+    injury:getChips('#chInjury'),action:$('#rAction').value.trim(),
+    family:$('#rFamily').value,familyTime:$('#rFamilyTime').value,gov:getChips('#chGov'),
+    factors:getMulti('#chFactor'),factorNote:$('#rFactorNote').value.trim(),
+    prevention:$('#rPrevention').value.trim(),
+    reporter:$('#rReporter').value.trim(),checker:$('#rChecker').value.trim(),
+    status:getChips('#chStatus')||'下書き'};
+}
+$('#btnRepSave').addEventListener('click',async ()=>{
+  const d=collectRep();
+  if(!d.type&&!d.situation){ toast('できごとの種類か、ようすを入れてください'); return; }
+  if(curRep){ Object.assign(curRep,d); await idbPut('reports',curRep); }
+  else { const rec=Object.assign({id:'r'+(++seq)+'_'+Date.now()},d); reports.push(rec); await idbPut('reports',rec); }
+  $('#dlgRep').close(); buildOptions(); renderList(); renderSum(); await stat();
+  toast('保存しました');
+});
+$('#btnRepDel').addEventListener('click',async ()=>{
+  if(!curRep) return;
+  if(!confirm('この記録を消します。よろしいですか？')) return;
+  reports=reports.filter(r=>r.id!==curRep.id);
+  await idbDel('reports',curRep.id);
+  $('#dlgRep').close(); renderList(); renderSum(); await stat();
+  toast('消しました');
+});
+
+/* ===== 報告書 ===== */
+function repHtml(r){
+  const F=(l,v)=>'<tr><th>'+l+'</th><td>'+esc(v||'')+'</td></tr>';
+  return '<div class="pg"><h2>'+(r.kind==='事故'?'事故報告書':'ヒヤリハット報告書')+'</h2>'+
+    '<table><tr><th>事業所</th><td>'+esc(settings.facility||'')+'</td><th>区分</th><td>'+esc(r.kind||'')+'</td></tr>'+
+    '<tr><th>発生日時</th><td>'+jpDate(r.date)+'　'+esc(r.time||'')+'</td>'+
+    '<th>場所</th><td>'+esc(r.place||r.placeOther||'')+'</td></tr>'+
+    '<tr><th>対象の方</th><td>'+esc(r.person||'')+'</td><th>種類</th><td>'+esc(r.type||'')+'</td></tr></table>'+
+    '<table>'+F('発生のようす',r.situation)+F('おけがの程度',r.injury)+F('その場の対応',r.action)+
+    F('ご家族への連絡',(r.family||'')+(r.familyTime?'（'+r.familyTime+'）':''))+
+    F('自治体への報告',r.gov)+
+    F('考えられる要因',(r.factors||[]).join('、')+(r.factorNote?'／'+r.factorNote:''))+
+    F('再発を防ぐために',r.prevention)+'</table>'+
+    '<table><tr><th>記入者</th><td>'+esc(r.reporter||'')+'</td>'+
+    '<th>管理者確認</th><td>'+esc(r.checker||'')+'</td></tr>'+
+    '<tr><th>状態</th><td colspan="3">'+esc(r.status||'')+'</td></tr></table></div>';
+}
+function printWindow(html,title){
+  const w=window.open('','_blank');
+  if(!w){ toast('印刷用の画面を開けませんでした'); return; }
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>'+title+'</title><style>'+
+    'body{font-family:-apple-system,"Hiragino Sans",sans-serif;padding:14px;color:#1B2A4A;}'+
+    '.pg{break-after:page;margin-bottom:20px;}.pg:last-child{break-after:auto;}'+
+    'h2{font-size:17px;text-align:center;margin:0 0 12px;letter-spacing:.12em;}'+
+    'table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:8px;}'+
+    'th,td{border:1px solid #888;padding:6px 7px;text-align:left;vertical-align:top;}'+
+    'th{background:#eee;white-space:nowrap;width:15%;}'+
+    '</style></head><body>'+html+'</body></html>');
+  w.document.close();
+  setTimeout(()=>w.print(),400);
+}
+$('#btnRepPrint').addEventListener('click',()=>printWindow(repHtml(collectRep()),'報告書'));
+$('#btnPrintMonth').addEventListener('click',()=>{
+  const ym=$('#outMonth').value;
+  if(!ym){ toast('月を選んでください'); return; }
+  const list=reports.filter(r=>r.date.slice(0,7)===ym).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!list.length){ toast('この月の記録はありません'); return; }
+  printWindow(list.map(repHtml).join(''),'報告書');
+});
+$('#btnCsv').addEventListener('click',()=>{
+  const ym=$('#outMonth').value;
+  const list=(ym?reports.filter(r=>r.date.slice(0,7)===ym):reports).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!list.length){ toast('記録がありません'); return; }
+  const head=['日付','時刻','曜日','区分','場所','種類','お名前','ようす','けが','対応','家族連絡','連絡時刻',
+    '自治体報告','要因','要因の詳細','再発防止','記入者','管理者確認','状態'];
+  const rows=list.map(r=>[r.date,r.time||'',r.date?WD[wday(r.date)]:'',r.kind||'',r.place||r.placeOther||'',
+    r.type||'',r.person||'',r.situation||'',r.injury||'',r.action||'',r.family||'',r.familyTime||'',
+    r.gov||'',(r.factors||[]).join(' / '),r.factorNote||'',r.prevention||'',r.reporter||'',r.checker||'',r.status||'']);
+  const csv='\uFEFF'+[head].concat(rows).map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='ヒヤリハット'+(ym?'-'+ym:'')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  toast('CSVを保存しました');
+});
+function copyText(t){
+  if(navigator.clipboard&&window.isSecureContext) return navigator.clipboard.writeText(t);
+  return new Promise(res=>{
+    const ta=document.createElement('textarea');
+    ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{document.execCommand('copy');}catch(e){}
+    document.body.removeChild(ta); res();
+  });
+}
+$('#btnMeetCopy').addEventListener('click',()=>copyText($('#meetText').textContent).then(()=>toast('コピーしました')));
+$('#btnMeetShare').addEventListener('click',()=>{
+  const t=$('#meetText').textContent;
+  if(navigator.share) navigator.share({text:t}).catch(()=>{});
+  else copyText(t).then(()=>toast('コピーしました'));
+});
+
+/* ===== バックアップ・設定 ===== */
+$('#btnBackup').addEventListener('click',async ()=>{
+  const data={app:'hiyari-techo',ver:1,reports:reports,settings:settings};
+  const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='ヒヤリハット帖-'+todayStr()+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  toast('保存しました');
+});
+$('#btnRestore').addEventListener('click',()=>{ $('#fileRestore').value=''; $('#fileRestore').click(); });
+$('#fileRestore').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=async ()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(d.app!=='hiyari-techo'||!Array.isArray(d.reports)){ toast('ヒヤリハット帖のファイルではありません'); return; }
+      if(!confirm('いまのデータをすべて置き換えます。よろしいですか？')) return;
+      await applyData(d); toast('復元しました');
+    }catch(err){ toast('読み込めませんでした'); }
+  };
+  rd.readAsText(f,'utf-8');
+});
+async function applyData(d){
+  await idbClear('reports');
+  for(const r of d.reports) await idbPut('reports',r);
+  settings=Object.assign({facility:'',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()},d.settings||{});
+  if(!Array.isArray(settings.places)||!settings.places.length) settings.places=DEF_PLACES.slice();
+  if(!Array.isArray(settings.types)||!settings.types.length) settings.types=DEF_TYPES.slice();
+  await idbPut('meta',{k:'settings',v:settings});
+  reports=d.reports.slice();
+  fillSettings(); buildOptions(); renderList(); renderSum(); await stat();
+}
+async function stat(){ $('#dataStat').textContent='いまの保存数：'+reports.length+'件'; }
+function fillSettings(){
+  $('#setFac').value=settings.facility||'';
+  $('#setPlaces').value=(settings.places||[]).join('\n');
+  $('#setTypes').value=(settings.types||[]).join('\n');
+}
+$('#btnSaveSet').addEventListener('click',async ()=>{
+  settings.facility=$('#setFac').value.trim();
+  const p=$('#setPlaces').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const t=$('#setTypes').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  settings.places=p.length?p:DEF_PLACES.slice();
+  settings.types=t.length?t:DEF_TYPES.slice();
+  await idbPut('meta',{k:'settings',v:settings});
+  buildOptions(); toast('保存しました');
+});
+$('#btnClear').addEventListener('click',async ()=>{
+  if(!confirm('この端末のすべての記録を消します。\n元にもどせません。よろしいですか？')) return;
+  if(!confirm('本当によろしいですか？\n先にバックアップをお取りください。')) return;
+  await idbClear('reports');
+  reports=[]; renderList(); renderSum(); await stat();
+  toast('消しました');
+});
+
+/* ===== サンプル ===== */
+function sampleData(){
+  const t=todayStr();
+  function d(n){ const p=t.split('-').map(Number); const dd=new Date(p[0],p[1]-1,p[2]-n);
+    return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
+  const R=[
+    {id:'x1',date:d(3),time:'10:20',kind:'ヒヤリハット',place:'廊下',placeOther:'',type:'転倒・転落',
+     person:'松本 静江',situation:'トイレから戻られる際、廊下のマットの端につまずかれ、手すりをつかんで持ちこたえられた。転倒はなし。',
+     injury:'なし',action:'その場で座っていただき、看護師が全身を確認。痛みの訴えなし。マットは即時に撤去。',
+     family:'不要と判断',familyTime:'',gov:'不要',factors:['環境','情報共有'],
+     factorNote:'マットの端がめくれていたが、誰も気づいていなかった。朝の申し送りにも出ていない。',
+     prevention:'廊下のマットは撤去する。毎朝の開所前点検の項目に「床の敷物」を加える。',
+     reporter:'山田',checker:'佐藤',status:'対応おわり'},
+    {id:'x2',date:d(9),time:'10:45',kind:'ヒヤリハット',place:'浴室・脱衣室',placeOther:'',type:'転倒・転落',
+     person:'川上 定男',situation:'脱衣室の床が濡れており、足を滑らせかけた。職員が支えて転倒には至らず。',
+     injury:'なし',action:'すぐに床を拭き、滑り止めマットを敷いた。',
+     family:'不要と判断',familyTime:'',gov:'不要',factors:['環境','手順'],
+     factorNote:'入浴の入れ替えが続き、床を拭く手が回っていなかった。',
+     prevention:'入浴の入れ替えごとに床を拭くことを手順に入れる。担当を決める。',
+     reporter:'鈴木',checker:'佐藤',status:'対応おわり'},
+    {id:'x3',date:d(16),time:'11:10',kind:'事故',place:'浴室・脱衣室',placeOther:'',type:'皮膚のはがれ・打撲',
+     person:'沢田 きよ',situation:'機械浴からの移乗の際、右前腕がリフトの金具に触れ、5cmほど表皮がはがれた。',
+     injury:'かすり傷・打撲',action:'看護師が洗浄し保護。ご家族に電話でご報告。翌日に受診の予定を相談。',
+     family:'連絡した',familyTime:'11:40',gov:'不要',factors:['用具','手順'],
+     factorNote:'金具にカバーが付いていなかった。移乗時に腕の位置を確認する手順がない。',
+     prevention:'リフトの金具にカバーを取り付ける。移乗前に腕と足の位置を声に出して確認する。',
+     reporter:'鈴木',checker:'佐藤',status:'報告した'},
+    {id:'x4',date:d(22),time:'14:30',kind:'ヒヤリハット',place:'食堂',placeOther:'',type:'誤嚥・むせこみ',
+     person:'田島 正一',situation:'おやつのカステラで強くむせ込まれた。背中をさすり、まもなく落ち着かれた。',
+     injury:'なし',action:'水分を少量ずつお出しし、様子を確認。看護師に報告。',
+     family:'連絡した',familyTime:'16:10',gov:'不要',factors:['からだ','情報共有'],
+     factorNote:'最近、飲み込みが弱くなっている様子があったが、記録に残っていなかった。',
+     prevention:'おやつの形を見直す。飲み込みの様子を毎回記録に残し、担当者会議で共有する。',
+     reporter:'山田',checker:'',status:'報告した'},
+    {id:'x5',date:d(28),time:'09:50',kind:'ヒヤリハット',place:'送迎車',placeOther:'',type:'送迎中のできごと',
+     person:'岡田 茂',situation:'乗車時、シートベルトを締める前に車が動きかけた。運転手が気づいてすぐ停止。',
+     injury:'なし',action:'全員の着席とベルトを確認してから発車し直した。',
+     family:'不要と判断',familyTime:'',gov:'不要',factors:['手順','人手'],
+     factorNote:'添乗の職員が別の方の介助をしており、確認の合図が出せていなかった。',
+     prevention:'添乗者が「ベルトよし」と声に出して合図するまで発車しない、と決める。',
+     reporter:'高橋',checker:'佐藤',status:'下書き'},
+    {id:'x6',date:d(40),time:'15:20',kind:'ヒヤリハット',place:'トイレ',placeOther:'',type:'転倒・転落',
+     person:'松本 静江',situation:'便座から立ち上がる際にふらつかれ、壁に手をついて支えられた。',
+     injury:'なし',action:'職員が付き添い、居室まで誘導。',
+     family:'不要と判断',familyTime:'',gov:'不要',factors:['からだ','人手'],
+     factorNote:'午後の時間帯で、職員が他の対応に入っていた。',
+     prevention:'立ち上がりに不安のある方は、午後も必ず付き添う。手すりの位置を検討する。',
+     reporter:'山田',checker:'佐藤',status:'対応おわり'}
+  ];
+  return {app:'hiyari-techo',ver:1,reports:R,
+    settings:{facility:'デイサービス みどりの里',places:DEF_PLACES.slice(),types:DEF_TYPES.slice()}};
+}
+$('#btnSample').addEventListener('click',async ()=>{
+  if(reports.length&&!confirm('いまのデータをすべて置き換えて、サンプルを入れます。\nよろしいですか？')) return;
+  await applyData(sampleData());
+  toast('サンプルを入れました');
+});
+
+/* ===== タブ ===== */
+$$('nav.tabs button').forEach(b=>b.addEventListener('click',async ()=>{
+  $$('nav.tabs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  $$('.page').forEach(p=>p.classList.remove('on'));
+  $('#p-'+b.dataset.tab).classList.add('on');
+  if(b.dataset.tab==='list') renderList();
+  if(b.dataset.tab==='sum') renderSum();
+  if(b.dataset.tab==='out'){ renderSum(); await stat(); }
+  window.scrollTo(0,0);
+}));
+
+/* ===== 起動 ===== */
+(async function init(){
+  try{ await openDB(); }
+  catch(e){ alert('この端末では記録を保存できません。ブラウザの設定をご確認ください。'); return; }
+  reports=await idbAll('reports');
+  const st=await idbGet('meta','settings');
+  if(st&&st.v){
+    settings=Object.assign(settings,st.v);
+    if(!Array.isArray(settings.places)||!settings.places.length) settings.places=DEF_PLACES.slice();
+    if(!Array.isArray(settings.types)||!settings.types.length) settings.types=DEF_TYPES.slice();
+  }
+  fillSettings(); buildOptions();
+  $('#outMonth').value=todayStr().slice(0,7);
+  renderList(); renderSum(); await stat();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
