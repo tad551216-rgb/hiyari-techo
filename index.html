@@ -1206,7 +1206,9 @@ async function scanHandle(text){
     return;
   }
   const p=text.split(':');
-  if(p.length<6) return;
+  /* 見出しは 印+通し番号+何枚目+全体枚数+本文 の5つに分かれる。
+     本文はBase64でコロンを含まないため、6つを求めると必ず取りこぼす。 */
+  if(p.length<5) return;
   const sid=p[1], i=Number(p[2]), n=Number(p[3]);
   const payload=text.slice(('HQR1:'+sid+':'+p[2]+':'+p[3]+':').length);
   if(!sid||!i||!n) return;
