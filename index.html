@@ -178,6 +178,7 @@ input.masked.show{-webkit-text-security:none;}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;}}
 </style>
 <script src="qrcode.js"></script>
+<script src="jsQR.js"></script>
 <script src="fg-barcode-scanner.min.js"></script>
 </head>
 <body>
@@ -513,6 +514,8 @@ input.masked.show{-webkit-text-security:none;}
         <b>10〜20cm離して、数秒静止させてください。</b>QRコードが枠いっぱいになるのが目安です。
         画面の明るさを上げると読みやすくなります。
       </p>
+      <button class="btn wide" id="btnScanPhoto" style="margin-top:12px;">📷 写真から読み取る（うまく読めないとき）</button>
+      <input type="file" id="filePhoto" accept="image/*" capture="environment" style="display:none;">
       <button class="btn wide" id="btnSelfTest" style="margin-top:12px;">🔧 自己診断（カメラを向けたまま押す）</button>
       <div id="photoOut"></div>
       <button class="btn wide" id="qrScanClose2" style="margin-top:12px;">閉じる</button>
@@ -1226,6 +1229,10 @@ async function scanHandle(text){
   if(ok){ toast('取り込みました'); $('#unpackOut').innerHTML=$('#scanOut').innerHTML; }
 }
 let scanTries=0, scanErr='', scanOn=false;
+/* zxHit: バーコードスキャン部品が「成功」を返した回数（空文字を含む）
+   qrTry: jsQR で実際に画像を解析した回数（＝本当の試行回数）
+   scanLast: 直近に受け取った中身のあたま。原因の切り分けに使う */
+let zxHit=0, jqTry=0, scanLast='';
 function scanDiag(){
   const el=$('#scanDiag'); if(!el) return;
   const v=$('#scanVideo');
@@ -1235,10 +1242,51 @@ function scanDiag(){
     if(info&&info.facingMode) cam='／'+(info.facingMode==='environment'?'背面':'前面');
   }catch(e){}
   el.textContent='映像 '+(v.videoWidth||0)+'×'+(v.videoHeight||0)+cam
-    +'／読み取り '+scanTries+'回'+(scanErr?('／'+scanErr):'');
+    +'／解析 '+jqTry+'回／成功 '+zxHit+'回'
+    +(scanLast?('／直近「'+scanLast+'」'):'')
+    +(scanErr?('／'+scanErr):'');
 }
+
+/* jsQR による二本目の読み取り。バーコードスキャン部品と同時に走らせる。
+   どちらかが読めれば取り込める。 */
+let jqRAF=null, jqCv=null, jqTick=0;
+function jqDecode(v, sx, sy, side, N, both){
+  try{
+    jqCv.width=N; jqCv.height=N;
+    const ctx=jqCv.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(v, sx, sy, side, side, 0, 0, N, N);
+    const img=ctx.getImageData(0,0,N,N);
+    const code=jsQR(img.data,N,N,{inversionAttempts:both?'attemptBoth':'dontInvert'});
+    return (code&&code.data)?code.data:null;
+  }catch(e){ scanErr=String(e&&e.message||e).slice(0,40); return null; }
+}
+function jqLoop(){
+  const v=$('#scanVideo');
+  jqTick++;
+  if(typeof jsQR!=='undefined' && v && v.readyState>=2 && v.videoWidth && jqCv && (jqTick%2===0)){
+    const vw=v.videoWidth, vh=v.videoHeight;
+    const side=Math.min(vw,vh);
+    const cx=(vw-side)/2, cy=(vh-side)/2;
+    /* 撮影が1920×1080なので、縮めずに等倍に近い大きさで解析する */
+    const N=Math.min(1080, side);
+    const m=jqTry%3;
+    let data=null;
+    if(m===0){ const s2=side*0.62, o=(side-s2)/2; data=jqDecode(v, cx+o, cy+o, s2, N, false); }
+    else if(m===1){ data=jqDecode(v, cx, cy, side, N, false); }
+    else { data=jqDecode(v, cx, cy, side, N, true); }
+    jqTry++;
+    if(jqTry%8===0) scanDiag();
+    if(data){ scanLast=String(data).slice(0,24); scanDiag(); scanHandle(data); }
+  }
+  jqRAF=requestAnimationFrame(jqLoop);
+}
+function jqStart(){ if(!jqCv) jqCv=document.createElement('canvas'); if(!jqRAF) jqLoop(); }
+function jqStop(){ if(jqRAF){ cancelAnimationFrame(jqRAF); jqRAF=null; } }
+let scanTimer=null;
 function scanStop(){
   scanOn=false;
+  jqStop();
+  if(scanTimer){ clearInterval(scanTimer); scanTimer=null; }
   try{ if(window.FGBarcodeScanner) FGBarcodeScanner.stop(); }catch(e){}
 }
 /* 読み取りは、実機で動いている「バーコードスキャン」の部品をそのまま使う */
@@ -1249,13 +1297,17 @@ async function startScan(){
   try{
     await FGBarcodeScanner.start(
       $('#scanVideo'),
-      (text)=>{ scanTries++; scanDiag(); if(text) scanHandle(text); },
+      (text)=>{ zxHit++; scanTries++;
+        scanLast=String(text||'（空）').slice(0,24); scanDiag();
+        if(text) scanHandle(text); },
       (e)=>{ scanErr=String(e&&e.message||e).slice(0,40); },
       ['QR_CODE']
     );
     scanOn=true;
+    jqStart();
     setTimeout(scanDiag,800);
-    setInterval(()=>{ if(scanOn) scanDiag(); }, 1500);
+    if(scanTimer) clearInterval(scanTimer);
+    scanTimer=setInterval(()=>{ if(scanOn) scanDiag(); }, 1500);
   }catch(e){
     scanErr=String(e&&e.message||e).slice(0,60);
     $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;">カメラを起動できませんでした。<br>'
@@ -1274,7 +1326,8 @@ $('#btnQrScan').addEventListener('click',async ()=>{
 $('#btnSelfTest').addEventListener('click',async ()=>{
   const out=$('#photoOut'), lines=[];
   lines.push('QR作成の部品：'+(typeof qrcode==='undefined'?'★読み込めていません':'あり'));
-  lines.push('QR読取の部品：'+(!window.FGBarcodeScanner?'★読み込めていません':'あり（バーコードスキャン）'));
+  lines.push('QR読取の部品①：'+(!window.FGBarcodeScanner?'★読み込めていません':'あり（バーコードスキャン）'));
+  lines.push('QR読取の部品②：'+(typeof jsQR==='undefined'?'★読み込めていません':'あり（jsQR）'));
   lines.push('安全な接続：'+(window.isSecureContext?'はい':'★いいえ'));
   const v=$('#scanVideo');
   lines.push('カメラ映像：'+(v.videoWidth||0)+'×'+(v.videoHeight||0));
@@ -1282,7 +1335,9 @@ $('#btnSelfTest').addEventListener('click',async ()=>{
     const info=FGBarcodeScanner.getActiveCameraInfo&&FGBarcodeScanner.getActiveCameraInfo();
     lines.push('使用中のカメラ：'+(info&&info.facingMode==='environment'?'背面':(info&&info.facingMode==='user'?'★前面':'不明')));
   }catch(e){ lines.push('使用中のカメラ：不明'); }
-  lines.push('読み取りを試みた回数：'+scanTries+'回');
+  lines.push('解析した回数：'+jqTry+'回');
+  lines.push('部品①が返した回数：'+zxHit+'回');
+  if(scanLast) lines.push('直近に読んだ中身：'+scanLast);
   if(scanErr) lines.push('直近のエラー：'+scanErr);
   const okAll=lines.every(l=>l.indexOf('★')<0);
   out.innerHTML='<div class="'+(okAll?'okbox':'warnbox')+'" style="margin-top:10px;font-size:12.5px;">'
@@ -1292,6 +1347,55 @@ $('#btnSelfTest').addEventListener('click',async ()=>{
       : '★の付いた項目が原因です。この画面を撮ってお知らせください。')+'</div>';
 });
 
+
+/* 撮った写真からQRを読み取る（動画で読めないときの逃げ道）
+   写真はカメラのピントが合うので、画面越しでも通りやすい。
+   QRが小さく写っていても拾えるよう、全体→中央寄せ→四分割 の順に試す。 */
+function photoTry(img, sx, sy, sw, sh, N){
+  try{
+    const cv=document.createElement('canvas');
+    const sc=Math.min(1, N/Math.max(sw,sh));
+    cv.width=Math.max(1,Math.round(sw*sc)); cv.height=Math.max(1,Math.round(sh*sc));
+    const ctx=cv.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+    const d=ctx.getImageData(0,0,cv.width,cv.height);
+    const code=jsQR(d.data,cv.width,cv.height,{inversionAttempts:'attemptBoth'});
+    return (code&&code.data)?code.data:null;
+  }catch(e){ return null; }
+}
+$('#btnScanPhoto').addEventListener('click',()=>{
+  if(typeof jsQR==='undefined'){ toast('読み取りの部品が読み込めていません'); return; }
+  $('#filePhoto').value=''; $('#filePhoto').click();
+});
+$('#filePhoto').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  $('#photoOut').innerHTML='<p class="qrhint" style="text-align:center;">読み取っています…</p>';
+  const img=new Image();
+  img.onload=()=>{
+    const W=img.width, H=img.height;
+    let data=null;
+    /* ① 写真全体 */
+    data=photoTry(img,0,0,W,H,1800);
+    /* ② 中央を大きめに切り出す */
+    if(!data){ const s2=Math.min(W,H)*0.8; data=photoTry(img,(W-s2)/2,(H-s2)/2,s2,s2,1600); }
+    /* ③ 四分割してそれぞれ拡大 */
+    if(!data){
+      const hw=W/2, hh=H/2;
+      for(const [x,y] of [[0,0],[hw,0],[0,hh],[hw,hh]]){
+        data=photoTry(img,x,y,hw,hh,1600); if(data) break;
+      }
+    }
+    URL.revokeObjectURL(img.src);
+    if(data){ $('#photoOut').innerHTML=''; scanHandle(data); }
+    else{
+      $('#photoOut').innerHTML='<div class="warnbox" style="margin-top:10px;">'+
+        'この写真からは読み取れませんでした。<br>QRコード全体がはっきり写るように、もう一度お試しください。'+
+        '<br><span style="font-size:11px;">写真の大きさ '+W+'×'+H+'</span></div>';
+    }
+  };
+  img.onerror=()=>{ $('#photoOut').innerHTML='<div class="warnbox" style="margin-top:10px;">写真を開けませんでした。</div>'; };
+  img.src=URL.createObjectURL(f);
+});
 
 function closeScan(){ scanStop(); $('#photoOut').innerHTML=''; $('#dlgQrScan').close(); }
 $('#qrScanClose').addEventListener('click',closeScan);
