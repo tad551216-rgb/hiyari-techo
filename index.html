@@ -178,8 +178,7 @@ input.masked.show{-webkit-text-security:none;}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;}}
 </style>
 <script src="qrcode.js"></script>
-<script src="jsQR.js"></script>
-<script src="zxing.min.js"></script>
+<script src="fg-barcode-scanner.min.js"></script>
 </head>
 <body>
 
@@ -511,16 +510,10 @@ input.masked.show{-webkit-text-security:none;}
       <div id="scanOut"></div>
       <p class="qrhint" id="scanDiag" style="text-align:center;margin-top:8px;font-size:11px;opacity:.75;">—</p>
       <p class="qrhint" style="text-align:center;margin-top:10px;">
-        <b>QRコードが枠いっぱいになるまで近づけてください。</b>10〜20cmくらいが目安です。
+        <b>10〜20cm離して、数秒静止させてください。</b>QRコードが枠いっぱいになるのが目安です。
         画面の明るさを上げると読みやすくなります。
       </p>
-      <p class="qrhint" style="text-align:center;margin-top:14px;">
-        それでも読み取れないときは、写真に撮ってからお試しください。<br>
-        （送る側で「とめる」を押し、1枚ずつ撮ってください）
-      </p>
-      <button class="btn wide" id="btnScanPhoto" style="margin-top:6px;">📷 写真を撮って読み取る</button>
-      <button class="btn wide" id="btnSelfTest" style="margin-top:6px;">🔧 自己診断（カメラを向けたまま押す）</button>
-      <input type="file" id="filePhoto" accept="image/*" capture="environment" style="display:none;">
+      <button class="btn wide" id="btnSelfTest" style="margin-top:12px;">🔧 自己診断（カメラを向けたまま押す）</button>
       <div id="photoOut"></div>
       <button class="btn wide" id="qrScanClose2" style="margin-top:12px;">閉じる</button>
     </div>
@@ -1232,174 +1225,73 @@ async function scanHandle(text){
   const ok=await importBundle(obj,'#scanOut');
   if(ok){ toast('取り込みました'); $('#unpackOut').innerHTML=$('#scanOut').innerHTML; }
 }
-let zxReader=null, scanTries=0, scanErr='';
+let scanTries=0, scanErr='', scanOn=false;
 function scanDiag(){
   const el=$('#scanDiag'); if(!el) return;
   const v=$('#scanVideo');
-  el.textContent='映像 '+(v.videoWidth||0)+'×'+(v.videoHeight||0)
+  let cam='';
+  try{
+    const info=window.FGBarcodeScanner&&FGBarcodeScanner.getActiveCameraInfo&&FGBarcodeScanner.getActiveCameraInfo();
+    if(info&&info.facingMode) cam='／'+(info.facingMode==='environment'?'背面':'前面');
+  }catch(e){}
+  el.textContent='映像 '+(v.videoWidth||0)+'×'+(v.videoHeight||0)+cam
     +'／読み取り '+scanTries+'回'+(scanErr?('／'+scanErr):'');
 }
 function scanStop(){
-  try{ if(zxReader){ zxReader.reset(); } }catch(e){}
-  zxReader=null;
-  if(scanStream){ try{ scanStream.getTracks().forEach(t=>t.stop()); }catch(e){} scanStream=null; }
+  scanOn=false;
+  try{ if(window.FGBarcodeScanner) FGBarcodeScanner.stop(); }catch(e){}
 }
-
-/* ZXing による連続読み取り。
-   Forguncy用に作ったスキャナと同じ仕組みで、実機での実績があります。 */
+/* 読み取りは、実機で動いている「バーコードスキャン」の部品をそのまま使う */
 async function startScan(){
-  if(typeof ZXing==='undefined'){ toast('読み取りの部品が読み込めていません'); return; }
-  const hints=new Map();
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.QR_CODE]);
-  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-  zxReader=new ZXing.BrowserMultiFormatReader(hints, 150);
+  if(!window.FGBarcodeScanner){ toast('読み取りの部品が読み込めていません'); return; }
+  if(!FGBarcodeScanner.isSupported()){ toast('この端末ではカメラが使えません'); return; }
+  if(!window.isSecureContext){ toast('https:// でお開きください'); return; }
   try{
-    await zxReader.decodeFromConstraints(
-      { video:{ facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} } },
-      'scanVideo',
-      (result, err)=>{
-        scanTries++;
-        if(scanTries%10===0) scanDiag();
-        if(result && result.getText){
-          const t=result.getText();
-          if(t) scanHandle(t);
-        }
-      });
-    const v=$('#scanVideo');
-    scanStream=v.srcObject||null;
-    setTimeout(scanDiag,600);
+    await FGBarcodeScanner.start(
+      $('#scanVideo'),
+      (text)=>{ scanTries++; scanDiag(); if(text) scanHandle(text); },
+      (e)=>{ scanErr=String(e&&e.message||e).slice(0,40); },
+      ['QR_CODE']
+    );
+    scanOn=true;
+    setTimeout(scanDiag,800);
+    setInterval(()=>{ if(scanOn) scanDiag(); }, 1500);
   }catch(e){
-    scanErr=String(e&&e.message||e).slice(0,50);
-    $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;">カメラを使えませんでした。<br>'
+    scanErr=String(e&&e.message||e).slice(0,60);
+    $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;">カメラを起動できませんでした。<br>'
       +'ブラウザの設定でカメラの使用を許可してください。<br><span style="font-size:11px;">'+esc(scanErr)+'</span></div>';
   }
 }
 
 $('#btnQrScan').addEventListener('click',async ()=>{
   if(!settings.shareKey){ gotoSettings('まず、共有の合言葉を入れてください'); return; }
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast('この端末ではカメラが使えません'); return; }
   scanReset(); scanTries=0; scanErr='';
   $('#dlgQrScan').showModal();
   await startScan();
 });
 /* 自己診断：QRを自分で作って、自分で読み取れるか試す。
    ここで成功すれば、読み取りの仕組み自体は動いています。 */
-$('#btnSelfTest').addEventListener('click',()=>{
-  const out=$('#photoOut');
-  const lines=[];
+$('#btnSelfTest').addEventListener('click',async ()=>{
+  const out=$('#photoOut'), lines=[];
   lines.push('QR作成の部品：'+(typeof qrcode==='undefined'?'★読み込めていません':'あり'));
-  lines.push('QR読取の部品：'+(typeof ZXing==='undefined'?'★読み込めていません':'あり（ZXing）'));
+  lines.push('QR読取の部品：'+(!window.FGBarcodeScanner?'★読み込めていません':'あり（バーコードスキャン）'));
+  lines.push('安全な接続：'+(window.isSecureContext?'はい':'★いいえ'));
   const v=$('#scanVideo');
-  lines.push('カメラ映像：'+(v.videoWidth||0)+'×'+(v.videoHeight||0)+'（状態 '+v.readyState+'）');
-  /* カメラの映像を画像に写し取れているかを確かめる */
+  lines.push('カメラ映像：'+(v.videoWidth||0)+'×'+(v.videoHeight||0));
   try{
-    if(!v.videoWidth){ lines.push('映像の写し取り：★映像がありません'); }
-    else{
-      const N=400;
-      const cv=document.createElement('canvas'); cv.width=N; cv.height=N;
-      const ctx=cv.getContext('2d',{willReadFrequently:true});
-      const side=Math.min(v.videoWidth,v.videoHeight);
-      ctx.drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,N,N);
-      const d=ctx.getImageData(0,0,N,N).data;
-      let mn=255,mx=0,sum=0;
-      for(let i=0;i<d.length;i+=4*37){
-        const g=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000;
-        if(g<mn)mn=g; if(g>mx)mx=g; sum+=g;
-      }
-      const avg=Math.round(sum/(d.length/(4*37)));
-      lines.push('映像の写し取り：明るさ '+Math.round(mn)+'〜'+Math.round(mx)+'（平均'+avg+'）');
-      if(mx-mn<20) lines.push('　→ ★映像が写し取れていません（真っ黒か真っ白）');
-      let seen='見つからず';
-      try{
-        const dd2=ctx.getImageData(0,0,N,N).data, g2=new Uint8ClampedArray(N*N);
-        for(let i=0;i<g2.length;i++) g2[i]=(dd2[i*4]*299+dd2[i*4+1]*587+dd2[i*4+2]*114)/1000;
-        const lum2=new ZXing.RGBLuminanceSource(g2,N,N);
-        const bmp2=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum2));
-        const h2=new Map(); h2.set(ZXing.DecodeHintType.TRY_HARDER,true);
-        h2.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.QR_CODE]);
-        const rd2=new ZXing.MultiFormatReader(); rd2.setHints(h2);
-        const r2=rd2.decode(bmp2);
-        if(r2&&r2.getText()) seen='読めた「'+String(r2.getText()).slice(0,24)+'」';
-      }catch(e){}
-      lines.push('いま写っているQR：'+seen);
-    }
-  }catch(e){
-    lines.push('映像の写し取り：★エラー '+String(e&&e.message||e).slice(0,50));
-  }
-  try{
-    const text='HQR1:test:1:1:ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const qr=qrcode(0,'M'); qr.addData(text); qr.make();
-    const n=qr.getModuleCount(), sc=6, quiet=4, size=(n+quiet*2)*sc;
-    const cv=document.createElement('canvas'); cv.width=size; cv.height=size;
-    const ctx=cv.getContext('2d',{willReadFrequently:true});
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,size,size);
-    ctx.fillStyle='#000';
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c))
-      ctx.fillRect((c+quiet)*sc,(r+quiet)*sc,sc,sc);
-    const d=ctx.getImageData(0,0,size,size);
-    let ok=false;
-    try{
-      const dd=d.data, g=new Uint8ClampedArray(size*size);
-      for(let i=0;i<g.length;i++) g[i]=(dd[i*4]*299+dd[i*4+1]*587+dd[i*4+2]*114)/1000;
-      const lum=new ZXing.RGBLuminanceSource(g,size,size);
-      const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-      const hh=new Map(); hh.set(ZXing.DecodeHintType.TRY_HARDER,true);
-      hh.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.QR_CODE]);
-      const rd=new ZXing.MultiFormatReader(); rd.setHints(hh);
-      const res=rd.decode(bmp); ok=(res&&res.getText()===text);
-    }catch(e){}
-    lines.push('自分で作ったQRを読む：'+(ok?'成功':'★失敗'));
-  }catch(e){
-    lines.push('自分で作ったQRを読む：★エラー '+String(e&&e.message||e).slice(0,50));
-  }
+    const info=FGBarcodeScanner.getActiveCameraInfo&&FGBarcodeScanner.getActiveCameraInfo();
+    lines.push('使用中のカメラ：'+(info&&info.facingMode==='environment'?'背面':(info&&info.facingMode==='user'?'★前面':'不明')));
+  }catch(e){ lines.push('使用中のカメラ：不明'); }
+  lines.push('読み取りを試みた回数：'+scanTries+'回');
+  if(scanErr) lines.push('直近のエラー：'+scanErr);
   const okAll=lines.every(l=>l.indexOf('★')<0);
   out.innerHTML='<div class="'+(okAll?'okbox':'warnbox')+'" style="margin-top:10px;font-size:12.5px;">'
     +lines.map(l=>l.replace(/</g,'&lt;')).join('<br>')
     +'<br><br>'+(okAll
-      ? '読み取りの仕組みは正しく動いています。あとは写り方の問題ですので、明るさと距離を変えてお試しください。'
+      ? 'すべて正常です。QRコードが枠いっぱいになるまで近づけて、数秒静止させてください。'
       : '★の付いた項目が原因です。この画面を撮ってお知らせください。')+'</div>';
 });
 
-/* 撮った写真からQRを読み取る（動画で読めないときの逃げ道） */
-$('#btnScanPhoto').addEventListener('click',()=>{ $('#filePhoto').value=''; $('#filePhoto').click(); });
-$('#filePhoto').addEventListener('change',e=>{
-  const f=e.target.files&&e.target.files[0]; if(!f) return;
-  $('#photoOut').innerHTML='<p class="qrhint" style="text-align:center;">読み取っています…</p>';
-  const img=new Image();
-  img.onload=()=>{
-    const long=Math.max(img.width,img.height);
-    const sc=Math.min(1, 1600/long);
-    const w=Math.round(img.width*sc), h=Math.round(img.height*sc);
-    const cv=document.createElement('canvas');
-    cv.width=w; cv.height=h;
-    const ctx=cv.getContext('2d',{willReadFrequently:true});
-    ctx.drawImage(img,0,0,w,h);
-    let text=null;
-    try{
-      const d=ctx.getImageData(0,0,w,h).data;
-      const g=new Uint8ClampedArray(w*h);
-      for(let i=0;i<g.length;i++) g[i]=(d[i*4]*299+d[i*4+1]*587+d[i*4+2]*114)/1000;
-      const lum=new ZXing.RGBLuminanceSource(g,w,h);
-      const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-      const hh=new Map();
-      hh.set(ZXing.DecodeHintType.TRY_HARDER,true);
-      hh.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.QR_CODE]);
-      const rd=new ZXing.MultiFormatReader(); rd.setHints(hh);
-      const res=rd.decode(bmp);
-      if(res&&res.getText()) text=res.getText();
-    }catch(err){}
-    URL.revokeObjectURL(img.src);
-    if(text){
-      $('#photoOut').innerHTML='';
-      scanHandle(text);
-    }else{
-      $('#photoOut').innerHTML='<div class="warnbox" style="margin-top:10px;">'+
-        'この写真からは読み取れませんでした。<br>QRコード全体がはっきり写るように、もう一度お試しください。</div>';
-    }
-  };
-  img.onerror=()=>{ $('#photoOut').innerHTML='<div class="warnbox" style="margin-top:10px;">写真を開けませんでした。</div>'; };
-  img.src=URL.createObjectURL(f);
-});
 
 function closeScan(){ scanStop(); $('#photoOut').innerHTML=''; $('#dlgQrScan').close(); }
 $('#qrScanClose').addEventListener('click',closeScan);

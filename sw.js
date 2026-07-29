@@ -1,5 +1,5 @@
-const CACHE = 'hiyari-techo-v18';
-const ASSETS = ['./','./index.html','./manifest.json','./qrcode.js','./jsQR.js','./zxing.min.js','./icon-192.png','./icon-512.png','./icon-180.png'];
+const CACHE = 'hiyari-techo-v19';
+const ASSETS = ['./','./index.html','./manifest.json','./qrcode.js','./fg-barcode-scanner.min.js','./icon-192.png','./icon-512.png','./icon-180.png'];
 
 /* 入れておく。1つ失敗しても、ほかは入れる */
 self.addEventListener('install', e=>{
