@@ -1145,7 +1145,7 @@ async function importBundle(obj,where){
 }
 
 /* ===== QRコードで渡す ===== */
-const QR_CHUNK=240;
+const QR_CHUNK=480;
 let qrParts=[], qrIdx=0, qrTimer=null, qrSpeed=1400, qrPaused=false;
 function drawQR(text){
   const cv=$('#qrCanvas'), ctx=cv.getContext('2d');

@@ -1,4 +1,4 @@
-const CACHE = 'hiyari-techo-v24';
+const CACHE = 'hiyari-techo-v25';
 const ASSETS = ['./','./index.html','./manifest.json','./qrcode.js','./jsQR.js','./fg-barcode-scanner.min.js','./icon-192.png','./icon-512.png','./icon-180.png'];
 
 /* 入れておく。1つ失敗しても、ほかは入れる */
