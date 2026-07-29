@@ -158,7 +158,7 @@ input.masked.show{-webkit-text-security:none;}
 .confirm b{display:block;font-size:calc(15px);color:var(--gold);margin-bottom:6px;}
 .confirm p{font-size:13px;color:var(--ink2);line-height:1.9;margin-bottom:11px;}
 .qrwrap{text-align:center;}
-.qrwrap canvas{width:min(88vw,480px);height:auto;background:#fff;border:10px solid #fff;
+.qrwrap canvas{width:min(92vw,700px);height:auto;background:#fff;border:10px solid #fff;
   border-radius:8px;box-shadow:0 2px 8px rgba(27,42,74,.18);}
 .qrstep{font-size:19px;font-weight:700;margin:12px 0 4px;}
 .qrbar{display:flex;gap:4px;justify-content:center;margin:8px 0 4px;flex-wrap:wrap;}
@@ -480,7 +480,7 @@ input.masked.show{-webkit-text-security:none;}
 
 <!-- QRを見せる -->
 <dialog id="dlgQrSend">
-  <div class="sheet" style="width:min(560px,94vw);">
+  <div class="sheet" style="width:min(780px,96vw);">
     <div class="sheet-head"><b>QRコードで渡す</b><button id="qrSendClose">閉じる</button></div>
     <div class="sheet-body qrwrap">
       <canvas id="qrCanvas" width="640" height="640"></canvas>
@@ -1107,7 +1107,7 @@ async function importBundle(obj,where){
 }
 
 /* ===== QRコードで渡す ===== */
-const QR_CHUNK=550;
+const QR_CHUNK=250;
 let qrParts=[], qrIdx=0, qrTimer=null, qrSpeed=700, qrPaused=false;
 function drawQR(text){
   const cv=$('#qrCanvas'), ctx=cv.getContext('2d');
