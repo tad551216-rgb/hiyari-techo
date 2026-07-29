@@ -158,7 +158,8 @@ input.masked.show{-webkit-text-security:none;}
 .confirm b{display:block;font-size:calc(15px);color:var(--gold);margin-bottom:6px;}
 .confirm p{font-size:13px;color:var(--ink2);line-height:1.9;margin-bottom:11px;}
 .qrwrap{text-align:center;}
-.qrwrap canvas{width:min(92vw,700px);height:auto;background:#fff;border:10px solid #fff;
+.qrwrap canvas{width:min(92vw,700px);height:auto;background:#fff;border:16px solid #fff;
+  image-rendering:pixelated;image-rendering:-webkit-optimize-contrast;
   border-radius:8px;box-shadow:0 2px 8px rgba(27,42,74,.18);}
 .qrstep{font-size:19px;font-weight:700;margin:12px 0 4px;}
 .qrbar{display:flex;gap:4px;justify-content:center;margin:8px 0 4px;flex-wrap:wrap;}
@@ -484,7 +485,7 @@ input.masked.show{-webkit-text-security:none;}
   <div class="sheet" style="width:min(780px,96vw);">
     <div class="sheet-head"><b>QRコードで渡す</b><button id="qrSendClose">閉じる</button></div>
     <div class="sheet-body qrwrap">
-      <canvas id="qrCanvas" width="640" height="640"></canvas>
+      <canvas id="qrCanvas" width="1024" height="1024"></canvas>
       <p class="qrstep" id="qrStep">—</p>
       <div class="qrbar" id="qrBar"></div>
       <p class="qrhint" id="qrHint"></p>
@@ -1104,14 +1105,14 @@ async function importBundle(obj,where){
 }
 
 /* ===== QRコードで渡す ===== */
-const QR_CHUNK=250;
-let qrParts=[], qrIdx=0, qrTimer=null, qrSpeed=700, qrPaused=false;
+const QR_CHUNK=150;
+let qrParts=[], qrIdx=0, qrTimer=null, qrSpeed=1400, qrPaused=false;
 function drawQR(text){
   const cv=$('#qrCanvas'), ctx=cv.getContext('2d');
   const qr=qrcode(0,'M');
   qr.addData(text);
   qr.make();
-  const n=qr.getModuleCount(), pad=2;
+  const n=qr.getModuleCount(), pad=4;
   const cell=Math.floor(cv.width/(n+pad*2));
   const off=Math.floor((cv.width-cell*n)/2);
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
@@ -1178,7 +1179,7 @@ $('#qrFaster').addEventListener('click',()=>{
   qrSpeed=Math.max(300,qrSpeed-200); qrStart(); toast('1枚 '+(qrSpeed/1000).toFixed(1)+'秒');
 });
 $('#qrSlower').addEventListener('click',()=>{
-  qrSpeed=Math.min(2000,qrSpeed+200); qrStart(); toast('1枚 '+(qrSpeed/1000).toFixed(1)+'秒');
+  qrSpeed=Math.min(4000,qrSpeed+200); qrStart(); toast('1枚 '+(qrSpeed/1000).toFixed(1)+'秒');
 });
 
 /* ===== QRコードを読み取る ===== */
