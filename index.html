@@ -518,7 +518,7 @@ input.masked.show{-webkit-text-security:none;}
         （送る側で「とめる」を押し、1枚ずつ撮ってください）
       </p>
       <button class="btn wide" id="btnScanPhoto" style="margin-top:6px;">📷 写真を撮って読み取る</button>
-      <button class="btn wide" id="btnSelfTest" style="margin-top:6px;">🔧 読み取り機能の自己診断</button>
+      <button class="btn wide" id="btnSelfTest" style="margin-top:6px;">🔧 自己診断（カメラを向けたまま押す）</button>
       <input type="file" id="filePhoto" accept="image/*" capture="environment" style="display:none;">
       <div id="photoOut"></div>
       <button class="btn wide" id="qrScanClose2" style="margin-top:12px;">閉じる</button>
@@ -1197,7 +1197,16 @@ function scanPaint(){
   $('#scanBar').innerHTML=h;
 }
 async function scanHandle(text){
-  if(!text||text.indexOf('HQR1:')!==0) return;
+  if(!text) return;
+  if(text.indexOf('HQR1:')!==0){
+    /* 読み取れてはいるが、このアプリの形式ではない場合 */
+    $('#scanStep').textContent='QRを読み取りましたが、このアプリのものではありません';
+    $('#scanOut').innerHTML='<div class="warnbox" style="margin-top:11px;">'+
+      '<b>QRコードは読み取れています。</b><br>ただし、このアプリで渡したものではありません。<br>'+
+      '読み取った中身のはじめ：<br><span style="font-family:ui-monospace,monospace;font-size:11px;">'+
+      esc(String(text).slice(0,40))+'</span></div>';
+    return;
+  }
   const p=text.split(':');
   if(p.length<6) return;
   const sid=p[1], i=Number(p[2]), n=Number(p[3]);
@@ -1306,6 +1315,30 @@ $('#btnSelfTest').addEventListener('click',()=>{
   lines.push('QR読取の部品：'+(typeof jsQR==='undefined'?'★読み込めていません':'あり'));
   const v=$('#scanVideo');
   lines.push('カメラ映像：'+(v.videoWidth||0)+'×'+(v.videoHeight||0)+'（状態 '+v.readyState+'）');
+  /* カメラの映像を画像に写し取れているかを確かめる */
+  try{
+    if(!v.videoWidth){ lines.push('映像の写し取り：★映像がありません'); }
+    else{
+      const N=400;
+      const cv=document.createElement('canvas'); cv.width=N; cv.height=N;
+      const ctx=cv.getContext('2d',{willReadFrequently:true});
+      const side=Math.min(v.videoWidth,v.videoHeight);
+      ctx.drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,N,N);
+      const d=ctx.getImageData(0,0,N,N).data;
+      let mn=255,mx=0,sum=0;
+      for(let i=0;i<d.length;i+=4*37){
+        const g=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000;
+        if(g<mn)mn=g; if(g>mx)mx=g; sum+=g;
+      }
+      const avg=Math.round(sum/(d.length/(4*37)));
+      lines.push('映像の写し取り：明るさ '+Math.round(mn)+'〜'+Math.round(mx)+'（平均'+avg+'）');
+      if(mx-mn<20) lines.push('　→ ★映像が写し取れていません（真っ黒か真っ白）');
+      const c2=jsQR(ctx.getImageData(0,0,N,N).data,N,N,{inversionAttempts:'attemptBoth'});
+      lines.push('いま写っているQR：'+(c2&&c2.data?('読めた「'+String(c2.data).slice(0,24)+'」'):'見つからず'));
+    }
+  }catch(e){
+    lines.push('映像の写し取り：★エラー '+String(e&&e.message||e).slice(0,50));
+  }
   try{
     const text='HQR1:test:1:1:ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const qr=qrcode(0,'M'); qr.addData(text); qr.make();
